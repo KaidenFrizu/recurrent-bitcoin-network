@@ -12,10 +12,11 @@ def get_table(requests_data):
         content['values'],
         columns = ['timestamp'] + newcols
     )
+    sample_df['timestamp'] = sample_df['timestamp'].str[:19]
     sample_df['timestamp'] = pd.to_datetime(
         sample_df['timestamp'],
         format='%Y-%m-%dT%H:%M:%S'
     )
 
-    return sample_df
+    return sample_df.set_index('timestamp')
 

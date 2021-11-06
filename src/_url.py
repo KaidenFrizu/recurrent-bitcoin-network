@@ -1,4 +1,3 @@
-
 # Messari URLs
 MESSARI_BASE_URL = 'https://data.messari.io/api/v1'
 MESSARI_BASE2_URL = 'https://data.messari.io/api/v2'
