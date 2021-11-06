@@ -33,4 +33,20 @@ pip install -r requirements.txt
 
 ### Contributing
 
-We would not be merging contributions (specifically ouside pull requests) for now, but we would release contributing guidelines in the near future. Although, you may raise an issue in this repository for any problems or suggestions.
+Here are some contributing guideline on submitting an issue or opening a pull request.
+
+- Submit an issue
+  
+  If you wanted to raise an issue such as problems or suggestions, you may create one in this repository. However, certain guidelines must be considered before raising one.
+
+  1. Make sure that the issue is not a duplicate of a previous issue. If there is an existing one, there's no need to create another issue. You may add reactions to such issue instead if you wanted to support in resolving as such.
+  2. Include as many relevant details as possible. Add code snippets and avoid inserting images, if possible. Show error messages if necessary.
+
+- Pull request
+  
+  Before opening a pull request, here are some general guidelines that is advised to avoid conflicts.
+
+  1. The pull request would come from your fork. Pull requests coming from a clone would be closed immediately.
+  2. Your pull request should be from a feature branch from `main` **in your forked repository**. Same action as stated previously would be given otherwise.
+  3. Include general details of your pull request: What is aimed to fix, what features would be added, etc.
+  4. Make sure your code adheres to the coding standards present in this repository (to be added soon).
