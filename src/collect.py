@@ -12,7 +12,7 @@ class Collector:
 
     def __init__(self, headers: Optional[dict] = None):
         if headers is None:
-            headers = dict()
+            headers = {}
 
         self.headers = headers
         self.sess = Session()
@@ -48,7 +48,7 @@ class Collector:
 
         # Instantiate a dummy list for passing to .join() method
         if columns is None:
-            columns = list()
+            columns = []
 
         url = MESSARI_TS_URL.format(assetkey, metric_id)
         params = {
