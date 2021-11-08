@@ -1,6 +1,6 @@
 # Recurrent Bitcoin Network
 
-[![CodeFactor](https://www.codefactor.io/repository/github/kaidenfrizu/recurrent-bitcoin-network/badge)](https://www.codefactor.io/repository/github/kaidenfrizu/recurrent-bitcoin-network)
+[![CodeFactor](https://www.codefactor.io/repository/github/kaidenfrizu/recurrent-bitcoin-network/badge)](https://www.codefactor.io/repository/github/kaidenfrizu/recurrent-bitcoin-network) [![DeepSource](https://deepsource.io/gh/KaidenFrizu/recurrent-bitcoin-network.svg/?label=resolved+issues&token=hwJ9eS-xya6xRz48SvXNyMUL)](https://deepsource.io/gh/KaidenFrizu/recurrent-bitcoin-network/?ref=repository-badge)
 
 ### About
 
