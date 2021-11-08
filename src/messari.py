@@ -6,7 +6,7 @@ from typing import Optional
 import pandas as pd
 
 
-class Metrics(object):
+class Metrics:
     def __init__(self, response: requests.models.Response):
         jsondata = response.json()
 
@@ -47,7 +47,7 @@ class Metrics(object):
         return [item for item in res if item not in metrics_to_remove]
 
 
-class Timeseries(object):
+class Timeseries:
     def __init__(self, response: requests.models.Response):
         jsondata = response.json()
 

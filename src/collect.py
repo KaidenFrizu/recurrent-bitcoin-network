@@ -8,7 +8,7 @@ from requests.sessions import Session
 from _url import MESSARI_METRICS_URL
 from _url import MESSARI_TS_URL
 
-class Collector(object):
+class Collector:
 
     def __init__(self, headers: Optional[dict] = None):
         if headers is None:
