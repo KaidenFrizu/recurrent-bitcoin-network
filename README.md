@@ -1,11 +1,14 @@
 # Recurrent Bitcoin Network
-## A Data Science Thesis Project
+
+[![CodeFactor](https://www.codefactor.io/repository/github/kaidenfrizu/recurrent-bitcoin-network/badge)](https://www.codefactor.io/repository/github/kaidenfrizu/recurrent-bitcoin-network)
 
 ### About
 
-This repository contains the source code for implementing Bitcoin price prediciton using a Seq2Seq RNN architecture via TensorFlow.
+This repository is part of our Data Science Undergraduate Thesis. It contains the source code for implementing Bitcoin price prediciton using a Seq2Seq RNN architecture via TensorFlow.
 
 The data was collected through [Messari](https://messari.io/) API. The documentation can be found [here](https://messari.io/api/docs).
+
+---
 
 ### Disclaimer
 
