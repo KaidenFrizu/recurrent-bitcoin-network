@@ -7,6 +7,17 @@ This repository contains the source code for implementing Bitcoin price predicit
 
 The data was collected through [Messari](https://messari.io/) API. The documentation can be found [here](https://messari.io/api/docs).
 
+### Disclaimer
+
+This project is only used for academic purposes, with no implications on its feasibility in actual price forecasting. We are not accountable for any loss or failures in your investments for any implementations of this project. This is NOT financial advice. For details, refer to the [GNU General Public License v3.0](LICENSE).
+
+---
+
+### Prerequesites
+
+- Python 3.7 or newer
+- Python packages listed in [requirements.txt](requirements.txt)
+
 ---
 
 ### How to reproduce this project?
@@ -43,6 +54,8 @@ Here are some contributing guideline on submitting an issue or opening a pull re
   2. Include as many relevant details as possible. Add code snippets and avoid inserting images, if possible. Show error messages if necessary.
 
 - Pull request
+
+  *Since this is an academic research, we are very conservative on the proposed features or changes on your pull requests. We may not accept such changes in our own discretion in adherence to our university's thesis guidelines.*
   
   Before opening a pull request, here are some general guidelines that is advised to avoid conflicts.
 
