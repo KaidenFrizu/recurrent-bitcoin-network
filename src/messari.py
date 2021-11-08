@@ -1,141 +1,73 @@
 import requests
-import json
-import time
+
+from typing import Union
+from typing import Optional
 
 import pandas as pd
-from tqdm import tqdm
-
-from _url import MESSARI_ASSETS_URL
-from _url import MESSARI_METRICS_URL
-from _url import MESSARI_PROFILE_URL
-from _url import MESSARI_TS_URL
-
-from formatting import get_table
 
 
-def get_assets(sess=None, fields=['id','slug','symbol'],
-               page=None, sort=None, limit=20, **kwargs):
+class Metrics(object):
+    def __init__(self, response: requests.models.Response):
+        jsondata = response.json()
 
-    if sess is None:
-        sess = requests.session()
+        self.timestamp = jsondata['status']['timestamp']
+        self.elapsed = jsondata['status']['elapsed']
+        self.data = pd.DataFrame(jsondata['data']['metrics'])
+        self.data.set_index('metric_id', inplace=True)
 
-    params = {
-        'fields':','.join(fields),
-        'page':page, 'sort':sort,
-        'limit':limit
-    }
+    def query(self, metric_id: str) -> pd.Series:
+        return self.data.loc[metric_id]
 
-    return sess.get(MESSARI_ASSETS_URL, params=params, **kwargs)
+    def get_free_metrics(self, return_df: bool = False
+                        ) -> Union[pd.DataFrame, list[str]]:
 
+        select = self.data['role_restriction'].isna()
 
-def get_profile(assetkey, fields=None, as_markdown=False,
-                sess=None, **kwargs):
+        if return_df:
+            return self.data[select]
 
-    if sess is None:
-        sess = requests.session()
-    
-    if fields is None:
-        fields = list()
+        return self.data[select].index.to_list()
 
-    url = MESSARI_PROFILE_URL.format(assetkey)
-    params = {
-        'fields':','.join(fields),
-        'as-markdown':as_markdown
-    }
+    def get_bitcoin_metrics(self, return_df: bool = False
+                           ) -> Union[pd.DataFrame, list[str]]:
 
-    return sess.get(url, params=params, **kwargs)
+        res = self.get_free_metrics(return_df=return_df)
 
+        # These metrics are either not supported by Bitcoin metrics or it
+        # contains missing values in Messari API
+        metrics_to_remove = [
+            'cg.sply.circ', 'sply.liquid', 'txn.tfr.erc20.cnt',
+            'txn.tfr.erc721.cnt', 'reddit.subscribers',
+            'reddit.active.users'
+        ]
 
-def get_metrics(assetkey, fields=None, sess=None, **kwargs):
+        if return_df:
+            return res.drop(metrics_to_remove)
 
-    if sess is None:
-        sess = requests.session()
-
-    url = MESSARI_METRICS_URL.format(assetkey)
-    params ={'fields':fields}
-
-    return sess.get(url, params=params, **kwargs)
+        return [item for item in res if item not in metrics_to_remove]
 
 
-def get_asset_timeseries(assetkey, metric_id,
-                         start='2016-01-01', end='2020-12-31',
-                         interval='1d', timestamp_format='rfc3339',
-                         columns=None, order=None, formatting='json',
-                         sess=None, **kwargs):
+class Timeseries(object):
+    def __init__(self, response: requests.models.Response):
+        jsondata = response.json()
 
-    if sess is None:
-        sess = requests.session()
+        self.timestamp = jsondata['status']['timestamp']
+        self.elapsed = jsondata['status']['elapsed']
 
-    url = MESSARI_TS_URL.format(assetkey, metric_id)
-    params = {
-        'start':start, 'end':end, 'interval':interval,
-        'columns':columns, 'order':order, 'format':formatting,
-        'timestamp-format':timestamp_format
-    }
+        self.parameters = jsondata['data']['parameters']
+        self.schema = jsondata['data']['schema']
+        self.data = pd.DataFrame(jsondata['data']['values'],
+                                 columns = self.parameters['columns'])
 
-    return sess.get(url, params=params, **kwargs)
+    def get_structured_data(self) -> pd.DataFrame:
+        df = self.data.copy()
 
+        df['timestamp'] = df['timestamp'].str[:10]
+        df['timestamp'] = pd.to_datetime(df['timestamp'], format='%Y-%m-%d')
+        df.set_index('timestamp', inplace=True)
 
-def download(filename=None, to_csv_kwargs=None, **kwargs):
-
-    with open('_metrics.json', 'r') as f:
-        metrics = json.load(f)
-        df_metrics = pd.read_json(metrics)
-
-    data = list()
-    pbar = tqdm(df_metrics['metric_id'])
-
-    for metric in pbar:
-        pbar.set_description(
-            'Now retrieving: {0}'.format(metric)
+        df.columns = pd.MultiIndex.from_product(
+            [[self.schema['name']], df.columns]
         )
 
-        success = False
-        while not success:
-            res = get_asset_timeseries(
-                assetkey='BTC',
-                metric_id=metric,
-                **kwargs
-            )
-
-            if res.status_code == 200:
-                data.append(get_table(res))
-                success = True
-                time.sleep(1)
-
-            elif res.status_code // 100 == 5:
-                pbar.write(
-                    'Request [{0}] in {1}'.format(
-                        res.status_code, metric
-                    )
-                )
-                time.sleep(5)
-                break
-
-            else:
-                pbar.set_description(
-                    '[Request {0}] | Now retrieving: {1}'.format(
-                        res.status_code, metric
-                    )
-                )
-                time.sleep(10)
-
-    data = pd.concat(data, axis=1).sort_index()
-
-    if filename is not None:
-        data.to_csv(filename, **to_csv_kwargs)
-
-    return data
-
-
-def load(filename, overwrite=False, read_csv_kwargs=dict(),
-         to_csv_kwargs=dict(), **kwargs):
-
-    if not overwrite:
-        try:
-            return pd.read_csv(filename, **read_csv_kwargs)
-        except FileNotFoundError:
-            return download(filename, to_csv_kwargs, **kwargs)
-
-    return download(filename, to_csv_kwargs, **kwargs)
-
+        return df
