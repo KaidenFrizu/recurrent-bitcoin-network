@@ -1,36 +1,62 @@
-import messari
+import src.messari as messari
+import src.exceptions as exceptions
 
 from typing import Optional
 from typing import Literal
+from typing import Union
 
-from requests.sessions import Session
+import requests
 
-from _url import MESSARI_METRICS_URL
-from _url import MESSARI_TS_URL
+from src._url import MESSARI_METRICS_URL
+from src._url import MESSARI_TS_URL
 
-class Collector:
 
-    def __init__(self, headers: Optional[dict] = None):
+class APICollector:
+
+    def __init__(
+        self,
+        headers: Optional[dict] = None,
+        params: Optional[dict] = None
+    ):
+
         if headers is None:
             headers = {}
+        if params is None:
+            params = {}
 
         self.headers = headers
-        self.sess = Session()
-        self.sess.headers.update({'content-type':'application/json'})
+        self.params = params
+        self.sess = requests.Session()
         self.sess.headers.update(self.headers)
+        self.sess.params.update(self.params)
 
     def restart_session(self):
-        self.sess = Session()
-        self.sess.headers.update({'content-type':'application/json'})
+        self.sess = requests.Session()
         self.sess.headers.update(self.headers)
+        self.sess.params.update(self.params)
+
+    def get(self, url: Union[str, bytes], **kwargs) -> requests.models.Response:
+        return self.sess.get(url, **kwargs)
+
+
+class MessariCollector(APICollector):
+
+    def __init__(
+        self,
+        headers: Optional[dict] = None,
+        params: Optional[dict] = None
+    ):
+
+        super().__init__(headers = headers, params=params)
 
     def get_metrics(self) -> messari.Metrics:
         url = MESSARI_METRICS_URL
 
-        response = self.sess.get(url)
+        response = self.get(url)
         response.raise_for_status()
 
-        return messari.Metrics(response)
+        if response.status_code == 200:
+            return messari.Metrics(response)
 
     def get_timeseries(
         self,
@@ -57,7 +83,24 @@ class Collector:
         'format':formatting, 'timestamp-format':timestamp_format
         }
 
-        response = self.sess.get(url, params=params)
-        response.raise_for_status()
+        response = self.get(url, params=params)
 
-        return messari.Timeseries(response)
+        if response.status_code == 200:
+            return messari.Timeseries(response)
+
+        return exceptions.MessariException(response)
+
+
+class NasdaqCollector(APICollector):
+
+    def __init__(
+        self,
+        headers: Optional[dict] = None,
+        params: Optional[dict] = None
+    ):
+
+        super().__init__(headers=headers, params=params)
+
+    # To do list
+    def get_timeseries(self):
+        pass

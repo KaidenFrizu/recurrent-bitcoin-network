@@ -1,7 +1,7 @@
 from tensorflow.keras import Model
 
-from layers import Encoder
-from layers import Decoder
+from .src.layers import Encoder
+from .src.layers import Decoder
 
 class RBN(Model):
     def __init__(self, t, k, H, units=32, **kwargs):
