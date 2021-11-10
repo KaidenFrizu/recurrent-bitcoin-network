@@ -8,12 +8,14 @@ import pandas as pd
 
 class Metrics:
     def __init__(self, response: requests.models.Response):
+        assert response.status_code == 200
         jsondata = response.json()
 
         self.timestamp = jsondata['status']['timestamp']
         self.elapsed = jsondata['status']['elapsed']
         self.data = pd.DataFrame(jsondata['data']['metrics'])
         self.data.set_index('metric_id', inplace=True)
+        self.data.sort_index(inplace=True)
 
     def query(self, metric_id: str) -> pd.Series:
         return self.data.loc[metric_id]
@@ -49,6 +51,7 @@ class Metrics:
 
 class Timeseries:
     def __init__(self, response: requests.models.Response):
+        assert response.status_code == 200
         jsondata = response.json()
 
         self.timestamp = jsondata['status']['timestamp']
@@ -64,10 +67,9 @@ class Timeseries:
 
         df['timestamp'] = df['timestamp'].str[:10]
         df['timestamp'] = pd.to_datetime(df['timestamp'], format='%Y-%m-%d')
-        df.set_index('timestamp', inplace=True)
 
-        df.columns = pd.MultiIndex.from_product(
-            [[self.schema['name']], df.columns]
-        )
+        df['metric'] = self.schema['metric_id']
+
+        df = df.melt(id_vars=['timestamp','metric'], var_name='submetric')
 
         return df
