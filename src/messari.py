@@ -1,19 +1,29 @@
 import requests
 
+from .exceptions import MessariException
+
 from typing import Union
 from typing import Optional
 
 import pandas as pd
 
 
-class Metrics:
+class MessariObject:
     def __init__(self, response: requests.models.Response):
-        assert response.status_code == 200
-        jsondata = response.json()
+        if response.status_code != 200:
+            exp = MessariException(response)
+            exp.raise_for_status()
 
-        self.timestamp = jsondata['status']['timestamp']
-        self.elapsed = jsondata['status']['elapsed']
-        self.data = pd.DataFrame(jsondata['data']['metrics'])
+        self.response = response
+
+
+class Metrics(MessariObject):
+    def __init__(self, response: requests.models.Response):
+        super().__init__(response=response)
+
+        self.timestamp = self.response['status']['timestamp']
+        self.elapsed = self.response['status']['elapsed']
+        self.data = pd.DataFrame(self.response['data']['metrics'])
         self.data.set_index('metric_id', inplace=True)
         self.data.sort_index(inplace=True)
 
@@ -49,17 +59,16 @@ class Metrics:
         return [item for item in res if item not in metrics_to_remove]
 
 
-class Timeseries:
+class Timeseries(MessariObject):
     def __init__(self, response: requests.models.Response):
-        assert response.status_code == 200
-        jsondata = response.json()
+        super().__init__(response=response)
 
-        self.timestamp = jsondata['status']['timestamp']
-        self.elapsed = jsondata['status']['elapsed']
+        self.timestamp = self.response['status']['timestamp']
+        self.elapsed = self.response['status']['elapsed']
 
-        self.parameters = jsondata['data']['parameters']
-        self.schema = jsondata['data']['schema']
-        self.data = pd.DataFrame(jsondata['data']['values'],
+        self.parameters = self.response['data']['parameters']
+        self.schema = self.response['data']['schema']
+        self.data = pd.DataFrame(self.response['data']['values'],
                                  columns = self.parameters['columns'])
 
     def get_structured_data(self) -> pd.DataFrame:

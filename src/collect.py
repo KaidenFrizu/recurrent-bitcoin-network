@@ -1,5 +1,5 @@
-import src.messari as messari
-import src.exceptions as exceptions
+from . import messari
+from . import exceptions
 
 from typing import Optional
 from typing import Literal
