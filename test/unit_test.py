@@ -3,9 +3,6 @@ import requests
 
 from src import collect
 
-global collector
-global URL
-
 collector = collect.APICollector()
 URL = 'https://httpbin.org/status/{}' 
 
