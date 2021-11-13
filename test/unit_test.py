@@ -3,14 +3,13 @@ import requests
 
 from src import collect
 
+global collector
+global URL
+
+collector = collect.APICollector()
+URL = 'https://httpbin.org/status/{}' 
+
 class CollectorCheck(unittest.TestCase):
-
-    def setUp(self):
-        global collector
-        global URL
-
-        collector = collect.APICollector()
-        URL = 'https://httpbin.org/status/{}'
 
     def test_attributes(self):
         self.assertIsInstance(collector.headers, dict)
