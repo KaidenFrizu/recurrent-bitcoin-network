@@ -1,23 +1,22 @@
 from tensorflow.keras import Model
 
-from .src.layers import Encoder
-from .src.layers import Decoder
+from . import layers
 
 class RBN(Model):
     def __init__(self, t, k, H, units=32, **kwargs):
         super(RBN, self).__init__(name='Recurrent Bitcoin Network', **kwargs)
 
-        self.encoder = Encoder(t=t, k=k, units=units)
-        self.decoder = Decoder(k=k, H=H, units=units)
+        self.encoder = layers.Encoder(t=t, k=k, units=units)
+        self.decoder = layers.Decoder(k=k, H=H, units=units)
 
     def encode(self, x):
         return self.encoder(x)
 
-    def decode(self, x, initial_state):
-        return self.decoder(x, initial_state)
+    def decode(self, x):
+        return self.decoder(x)
 
-    def call(self, x, training=True):
+    def call(self, x):
         x = self.encode(x)
-        x = self.decode(x[0], x[1:])
+        x = self.decode(x)
 
         return x

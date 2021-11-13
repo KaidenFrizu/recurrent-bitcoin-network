@@ -27,8 +27,8 @@ class Decoder(Layer):
         self.resolve = Dense(k)
         self.time_dist = TimeDistributed(self.resolve)
 
-    def call(self, x, initial_state):
-        x = self.repeat_vector(x, initial_state)
+    def call(self, x):
+        x = self.repeat_vector(x)
         x = self.lstm_decoder(x)
         x = self.time_dist(x)
 
