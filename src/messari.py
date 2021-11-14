@@ -15,15 +15,16 @@ class MessariObject:
             exp.raise_for_status()
 
         self.response = response
+        self.content = self.response.json()
 
 
 class Metrics(MessariObject):
     def __init__(self, response: requests.models.Response):
         super().__init__(response=response)
 
-        self.timestamp = self.response['status']['timestamp']
-        self.elapsed = self.response['status']['elapsed']
-        self.data = pd.DataFrame(self.response['data']['metrics'])
+        self.timestamp = self.content['status']['timestamp']
+        self.elapsed = self.content['status']['elapsed']
+        self.data = pd.DataFrame(self.content['data']['metrics'])
         self.data.set_index('metric_id', inplace=True)
         self.data.sort_index(inplace=True)
 
@@ -63,12 +64,12 @@ class Timeseries(MessariObject):
     def __init__(self, response: requests.models.Response):
         super().__init__(response=response)
 
-        self.timestamp = self.response['status']['timestamp']
-        self.elapsed = self.response['status']['elapsed']
+        self.timestamp = self.content['status']['timestamp']
+        self.elapsed = self.content['status']['elapsed']
 
-        self.parameters = self.response['data']['parameters']
-        self.schema = self.response['data']['schema']
-        self.data = pd.DataFrame(self.response['data']['values'],
+        self.parameters = self.content['data']['parameters']
+        self.schema = self.content['data']['schema']
+        self.data = pd.DataFrame(self.content['data']['values'],
                                  columns = self.parameters['columns'])
 
     def get_structured_data(self) -> pd.DataFrame:
