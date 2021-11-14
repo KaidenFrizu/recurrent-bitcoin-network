@@ -21,7 +21,7 @@ class MessariException(APIException):
         self.error_message = jsondata['status']['error_message']
 
         if self.error_code == 429:
-            self.cooldown = int(re.findall('\d+', self.error_message)[0]) + 1
+            self.cooldown = int(re.findall(r"\d+", self.error_message)[0]) + 1
 
     def show_error(self) -> tuple:
         return self.error_code, self.error_message
