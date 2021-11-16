@@ -41,7 +41,7 @@ python -m venv .env
 pip install -r requirements.txt
 ```
 
-*Chapter Unfinished. Please come back later.*
+5. Run `Documentation.ipynb` and `Modelling.ipynb` in that order. These are found in [docs](docs) folder.
 
 ---
 
