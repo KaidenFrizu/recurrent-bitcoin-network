@@ -38,14 +38,12 @@ class Decoder(Layer):
         **kwargs
     ):
 
-        self.__MAX_HORIZON = H
-
         if rnn_kwargs is None:
             rnn_kwargs = {}
 
         super(Decoder, self).__init__(name='Decoder', **kwargs)
 
-        self.repeat_vector = RepeatVector(self.__MAX_HORIZON)
+        self.repeat_vector = RepeatVector(H)
         self.lstm_decoder = LSTM(units=units, return_sequences=True, 
                                  **rnn_kwargs)
         self.time_dist = TimeDistributed(Dense(1))

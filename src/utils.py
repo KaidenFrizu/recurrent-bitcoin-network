@@ -1,9 +1,22 @@
 import numpy as np
+from sklearn.decomposition import TruncatedSVD
+
+from typing import Optional
 
 
-def create_ts_batch(X, y, length, horizon, window_rate=1):
+def create_ts_batch(
+    X, y,
+    length: int,
+    horizon: int,
+    k: Optional[int] = None,
+    window_rate: Optional[int] = 1
+):
     x_result = []
     y_result = []
+
+    if k is not None:
+        trunc = TruncatedSVD(n_components=k, algorithm='arpack')
+        X = trunc.fit_transform(X)
 
     start = 0
 

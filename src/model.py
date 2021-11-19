@@ -1,16 +1,17 @@
-import numpy as np
-
 from tensorflow.keras import Model
-from tensorflow.keras.layers import InputLayer
-from tensorflow import convert_to_tensor
+from tensorflow.keras.layers import RepeatVector
+from tensorflow.keras.layers import LSTM
+from tensorflow.keras.layers import Normalization
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import TimeDistributed
 
 from typing import Optional
 
-from . import layers
 
 class RBN(Model):
     def __init__(
         self,
+        name: str,
         t: int,
         k: int,
         H: int = 28,
@@ -26,35 +27,22 @@ class RBN(Model):
         if decoder_kwargs is None:
             decoder_kwargs = {}
 
-        super(RBN, self).__init__(name='Recurrent-Bitcoin-Network', **kwargs)
+        super(RBN, self).__init__(name=name, **kwargs)
 
-        self.arr_decode = np.empty((1,H), dtype='float32')
-        self.arr_decode = convert_to_tensor(self.arr_decode)
+        # Encoder
+        self.normalize = Normalization(axis=-1, input_shape=(t,k),
+                                       name='Normalizer')
+        self.lstm_encoder = LSTM(units=units, input_shape=(t,k),
+                                 name='Encoder',
+                                 unroll=True)
 
-        self.inputlayer = InputLayer(input_shape=(t, k), dtype='float32',
-                                     name='InputCheck')
-
-        self.encoder = layers.Encoder(
-            units=units,
-            rnn_kwargs={'input_shape':(None,t,k)},
-            **encoder_kwargs
-        )
-
-        self.decoder = layers.Decoder(
-            H=H, units=units,
-            **decoder_kwargs
-        )
-
-    def encode(self, x):
-        x = self.inputlayer(x)
-
-        return self.encoder(x)
-
-    def decode(self, initial_state):
-
-        return self.decoder(self.arr_decode, initial_state)
+        # Decoder
+        self.dense = Dense(H, name='Decoder')
 
     def call(self, x):
-        x, state_h, state_c = self.encode(x)
+        # Encoding Phase
+        x = self.normalize(x)
+        x = self.lstm_encoder(x)
 
-        return self.decode(initial_state=[state_h, state_c])
+        # Decoding Phase
+        return self.dense(x)
