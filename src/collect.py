@@ -1,5 +1,5 @@
-from . import messari
-from . import exceptions
+import messari
+import exceptions
 
 from typing import Optional
 from typing import Literal
@@ -7,8 +7,8 @@ from typing import Union
 
 import requests
 
-from src._url import MESSARI_METRICS_URL
-from src._url import MESSARI_TS_URL
+from _url import MESSARI_METRICS_URL
+from _url import MESSARI_TS_URL
 
 
 class APICollector:

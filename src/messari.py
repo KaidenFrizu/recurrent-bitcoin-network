@@ -1,6 +1,6 @@
 import requests
 
-from .exceptions import MessariException
+from exceptions import MessariException
 
 from typing import Union
 from typing import Optional
