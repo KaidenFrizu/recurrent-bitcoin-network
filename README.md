@@ -19,7 +19,11 @@ This project is only used for academic purposes, with no implications on its fea
 ### Prerequesites
 
 - Python 3.7 or newer
-- Python packages listed in [requirements.txt](requirements.txt)
+- TensorFlow 2.8.0 or newer
+- Other packages listed in [requirements.txt](requirements.txt)
+
+### Optional
+- Messari API Key. This can be acquired through [Messari](https://messari.io/) to be used in their [web API](https://messari.io/api/docs).
 
 ---
 
@@ -41,7 +45,7 @@ python -m venv .env
 pip install -r requirements.txt
 ```
 
-5. Run `Documentation.ipynb` and `Modelling.ipynb` in that order. These are found in [docs](docs) folder.
+5. Run the notebooks `Documentation.ipynb` and `Modelling.ipynb`. These are found in [docs](docs) folder.
 
 ---
 
