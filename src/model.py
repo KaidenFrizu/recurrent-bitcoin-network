@@ -8,7 +8,6 @@ from sklearn.decomposition import TruncatedSVD
 from tensorflow.keras import Model
 from tensorflow.keras.layers import InputLayer
 from tensorflow.keras.layers import LeakyReLU
-from tensorflow.keras.layers import RepeatVector
 from tensorflow.keras.layers import LSTM
 from tensorflow.keras.layers import Normalization
 from tensorflow.keras.layers import Dense
@@ -19,6 +18,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import TensorBoard
 
 class RBN(Model):
+
 
     def __init__(
         self,
@@ -44,7 +44,7 @@ class RBN(Model):
         super(RBN, self).__init__(name=self.model_name, **kwargs)
 
         # Encoder
-        self.input_layer = InputLayer(input_shape=(self.t,self.k),
+        self.input_layer = InputLayer(input_shape=(self.t, self.k),
                                       name='Past_Inputs')
         self.normalize = Normalization(axis=-1,
                                        name='Normalizer')
@@ -55,7 +55,7 @@ class RBN(Model):
                                  **encoder_kwargs)
 
         # Decoder
-        self.future_layer = InputLayer(input_shape=(self.t, 5), # date features
+        self.future_layer = InputLayer(input_shape=(self.t, 5),  # Dates
                                        name='Future_Inputs')
         self.lstm_decoder = LSTM(units=125,
                                  name='Decoder',
@@ -84,8 +84,11 @@ class RBN(Model):
 
 class RNNmodel:
 
+
     def __init__(
         self,
+        train,
+        test,
         t: int,
         k: Optional[int] = None,
         H: Optional[int] = 7,
@@ -95,7 +98,7 @@ class RNNmodel:
         self.k = k
         self.H = H
         self.model_name = model_name
-        self.RNNmodel = RBN(
+        self.TFmodel = RBN(
             model_name=self.model_name,
             t=self.t,
             k=self.k,
@@ -104,14 +107,13 @@ class RNNmodel:
         self.SVDmodel = TruncatedSVD(n_components=self.k)
 
         self.metric = rmse(name='rmse')
-        self.optimizer = Adam(learning_rate = 0.001, name='Adam')
+        self.optimizer = Adam(learning_rate=0.001, name='Adam')
 
         self.logdirectory = '../logs/fit/' + self.model_name
         self.callback = TensorBoard(
             log_dir=self.logdirectory, histogram_freq=1
         )
 
-    def initialize(self, train, test):
         train_x = train.pivot_table(
             index='timestamp',
             columns=['metric', 'submetric'],
@@ -128,12 +130,12 @@ class RNNmodel:
         test_y = test_x.pop('price')
         test_y = test_y['close']
 
-        selected_features = ['act.addr.cnt','blk.size.byte',
-                             'blk.size.bytes.avg','daily.shp',
-                             'daily.vol','exch.flow.in.usd.incl','exch.sply',
-                             'hashrate','mcap.dom','mcap.realized',
-                             'nvt.adj.90d.ma','real.vol',
-                             'txn.cnt','txn.tsfr.cnt','txn.vol']
+        selected_features = ['act.addr.cnt', 'blk.size.byte',
+                             'blk.size.bytes.avg', 'daily.shp',
+                             'daily.vol', 'exch.flow.in.usd.incl', 'exch.sply',
+                             'hashrate', 'mcap.dom', 'mcap.realized',
+                             'nvt.adj.90d.ma', 'real.vol',
+                             'txn.cnt', 'txn.tsfr.cnt', 'txn.vol']
 
         self.train_x = train_x[selected_features].values
         self.test_x = test_x[selected_features].values
@@ -152,9 +154,9 @@ class RNNmodel:
 
         self.future_traindata = pd.DataFrame(
             {
-                'Quarter':date_quarter_past,'DayOfWeek_cos':dow_cos_past,
-                'DayOfWeek_sin':dow_sin_past,'DayOfYear_cos':doy_cos_past,
-                'DayOfYear_sin':doy_sin_past
+                'Quarter': date_quarter_past, 'DayOfWeek_cos': dow_cos_past,
+                'DayOfWeek_sin': dow_sin_past, 'DayOfYear_cos': doy_cos_past,
+                'DayOfYear_sin': doy_sin_past
             }
         )
 
@@ -169,9 +171,9 @@ class RNNmodel:
 
         self.future_testdata = pd.DataFrame(
             {
-                'Quarter':date_quarter, 'DayOfWeek_cos':dow_cos,
-                'DayOfWeek_sin':dow_sin, 'DayOfYear_cos':doy_cos,
-                'DayOfYear_sin':doy_sin
+                'Quarter': date_quarter, 'DayOfWeek_cos': dow_cos,
+                'DayOfWeek_sin': dow_sin, 'DayOfYear_cos': doy_cos,
+                'DayOfYear_sin': doy_sin
             }
         )
 
@@ -189,17 +191,15 @@ class RNNmodel:
             self.future_testdata.values, self.t, self.H
         )
 
-        self.RNNmodel.normalize.adapt(self.xtrain[0])
-        self.RNNmodel.compile(
+        self.TFmodel.normalize.adapt(self.xtrain[0])
+        self.TFmodel.compile(
             optimizer=self.optimizer,
             loss='mse',
             metrics=[self.metric]
         )
 
-        return None
-
     def train(self, batch_size, epochs, **kwargs):
-        self.RNNmodel.fit(
+        self.TFmodel.fit(
             self.xtrain,
             self.ytrain, batch_size, epochs,
             callbacks=[self.callback], validation_split=0.2,
@@ -207,16 +207,12 @@ class RNNmodel:
             **kwargs
         )
 
-        return None
-
     def evaluate(self, batch_size):
-        self.RNNmodel.evaluate(
+        self.TFmodel.evaluate(
             self.xtest,
             self.ytest, batch_size,
             callbacks=[self.callback]
         )
 
-        return None
-
     def predict(self, data):
-        return self.RNNmodel.predict(data)
+        return self.TFmodel.predict(data)

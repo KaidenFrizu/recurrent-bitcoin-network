@@ -31,8 +31,10 @@ class Metrics(MessariObject):
     def query(self, metric_id: str) -> pd.Series:
         return self.data.loc[metric_id]
 
-    def get_free_metrics(self, return_df: bool = False
-                        ) -> Union[pd.DataFrame, list[str]]:
+    def get_free_metrics(
+        self,
+        return_df: bool = False
+    ) -> Union[pd.DataFrame, list[str]]:
 
         select = self.data['role_restriction'].isna()
 
@@ -41,8 +43,10 @@ class Metrics(MessariObject):
 
         return self.data[select].index.to_list()
 
-    def get_bitcoin_metrics(self, return_df: bool = False
-                           ) -> Union[pd.DataFrame, list[str]]:
+    def get_bitcoin_metrics(
+        self,
+        return_df: bool = False
+    ) -> Union[pd.DataFrame, list[str]]:
 
         res = self.get_free_metrics(return_df=return_df)
 
@@ -70,7 +74,7 @@ class Timeseries(MessariObject):
         self.parameters = self.content['data']['parameters']
         self.schema = self.content['data']['schema']
         self.data = pd.DataFrame(self.content['data']['values'],
-                                 columns = self.parameters['columns'])
+                                 columns=self.parameters['columns'])
 
     def get_structured_data(self) -> pd.DataFrame:
         df = self.data.copy()
@@ -80,6 +84,6 @@ class Timeseries(MessariObject):
 
         df['metric'] = self.schema['metric_id']
 
-        df = df.melt(id_vars=['timestamp','metric'], var_name='submetric')
+        df = df.melt(id_vars=['timestamp', 'metric'], var_name='submetric')
 
         return df

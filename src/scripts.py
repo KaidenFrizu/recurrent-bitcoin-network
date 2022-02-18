@@ -6,13 +6,13 @@ from tqdm import tqdm
 
 def get_data(start, end):
 
-    api_header = {'x-messari-api-key':os.getenv('MESSARI_API_KEY')}
+
+    api_header = {'x-messari-api-key': os.getenv('MESSARI_API_KEY')}
     collector = collect.MessariCollector(headers=api_header)
     metrics = collector.get_metrics()
 
     btc_metrics = metrics.get_free_metrics()
-    data_list = list()
-
+    data_list = []
 
     with tqdm(total=len(btc_metrics)) as pbar:
         pbar.set_description('Response [200]')
@@ -32,7 +32,7 @@ def get_data(start, end):
                     if result.error_code == 429:
                         time.sleep(result.cooldown)
                         continue
-                    
+
                     break
 
                 data_list.append(result.get_structured_data())

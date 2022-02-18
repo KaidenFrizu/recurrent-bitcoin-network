@@ -47,16 +47,16 @@ class MessariCollector(APICollector):
         params: Optional[dict] = None
     ):
 
-        super().__init__(headers = headers, params=params)
+        super().__init__(headers=headers, params=params)
 
     def get_metrics(self) -> messari.Metrics:
         url = MESSARI_METRICS_URL
-
         response = self.get(url)
-        response.raise_for_status()
 
-        if response.status_code == 200:
-            return messari.Metrics(response)
+        if response.status_code != 200:
+            response.raise_for_status()
+
+        return messari.Metrics(response)
 
     def get_timeseries(
         self,
@@ -64,9 +64,10 @@ class MessariCollector(APICollector):
         metric_id: str,
         start: Optional[str] = None,
         end: Optional[str] = None,
-        interval: Literal['1m','5m','15m','30m','1h','1d','1w'] = '1d',
-        timestamp_format: \
-            Literal['unix-millisecond','unix-second','rfc3339'] = 'rfc3339',
+        interval: Literal['1m', '5m', '15m', '30m', '1h', '1d', '1w'] = '1d',
+        timestamp_format: Literal[
+            'unix-millisecond', 'unix-second', 'rfc3339'
+        ] = 'rfc3339',
         columns: Optional[list[str]] = None,
         order: Optional[Literal['asc', 'desc']] = None,
         formatting: Literal['csv', 'json'] = 'json',
@@ -78,9 +79,9 @@ class MessariCollector(APICollector):
 
         url = MESSARI_TS_URL.format(assetkey, metric_id)
         params = {
-        'start':start, 'end':end, 'interval':interval,
-        'columns':','.join(columns), 'order':order,
-        'format':formatting, 'timestamp-format':timestamp_format
+            'start': start, 'end': end, 'interval': interval,
+            'columns': ','.join(columns), 'order': order,
+            'format': formatting, 'timestamp-format': timestamp_format
         }
 
         response = self.get(url, params=params)
@@ -90,17 +91,3 @@ class MessariCollector(APICollector):
 
         return exceptions.MessariException(response)
 
-
-class NasdaqCollector(APICollector):
-
-    def __init__(
-        self,
-        headers: Optional[dict] = None,
-        params: Optional[dict] = None
-    ):
-
-        super().__init__(headers=headers, params=params)
-
-    # To do list
-    def get_timeseries(self):
-        pass

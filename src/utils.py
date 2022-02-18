@@ -1,6 +1,4 @@
 import numpy as np
-from sklearn.decomposition import TruncatedSVD
-
 from typing import Optional
 
 
@@ -43,9 +41,9 @@ def create_ts_batch(
 
     x_result = np.array(x_result, dtype='float64')
     xfuture_result = np.array(xfuture_result, dtype='float64')
-    y_result = np.array(y_result, dtype='float64').reshape((-1,horizon,1))
+    y_result = np.array(y_result, dtype='float64').reshape((-1, horizon, 1))
     plotdata_result = np.array(plotdata, dtype='float64').reshape(
-        (-1,length,1)
+        (-1, length, 1)
     )
 
     return (x_result, xfuture_result), y_result, plotdata_result
