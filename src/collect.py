@@ -34,8 +34,6 @@ from _url import MESSARI_METRICS_URL
 from _url import MESSARI_TS_URL
 
 
-# pylint: disable=too-many-arguments
-
 class APICollector:
     """A base web API collector to be used as a tool for data collection.
 

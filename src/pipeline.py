@@ -23,9 +23,6 @@ import tensorflow as tf
 from sklearn.decomposition import TruncatedSVD
 import model
 
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=too-many-arguments
-
 
 class ModelPipeline:
     """A general class used as a guideline for a model pipeline given

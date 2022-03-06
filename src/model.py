@@ -17,11 +17,6 @@ from typing import Optional
 from datetime import datetime
 import tensorflow as tf
 
-# pylint: disable=too-few-public-methods
-# pylint: disable=too-many-arguments
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=invalid-name
-
 
 class Encoder(tf.keras.layers.Layer):
     """A custom Tensorflow layer dedicated for the encoding phase of the
