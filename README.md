@@ -18,9 +18,8 @@ This project is only used for academic purposes, with no implications on its fea
 
 ### Prerequesites
 
-- Python 3.7 or newer
-- TensorFlow 2.8.0 or newer
-- Other packages listed in [requirements.txt](requirements.txt)
+- Python 3.9 or newer
+- Packages listed in [requirements.txt](requirements.txt)
 
 ### Optional
 - Messari API Key. This can be acquired through [Messari](https://messari.io/) to be used in their [web API](https://messari.io/api/docs).
