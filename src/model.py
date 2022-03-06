@@ -88,6 +88,7 @@ class Decoder(tf.keras.layers.Layer):
 
     Args:
         units: The number of LSTM units to be created on LSTM decoder.
+        horizon: The number of future timesteps to cast a prediction.
 
     Attributes:
         lstmcell: A core LSTM cell for the decoding framework.

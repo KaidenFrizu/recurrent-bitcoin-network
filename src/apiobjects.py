@@ -178,7 +178,6 @@ class MessariTimeseries(MessariBaseObject):
             Messari web API request.
         start_date: A `datetime` object which denotes the start date of the
             given data received.
-        slug: An alternative identifier for a given cryptocurrency asset.
         submetrics: A dictionary of column descriptions returned in the
             GET request.
         timestamp_format: Denotes the format of the returned timestamp.
