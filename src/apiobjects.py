@@ -27,28 +27,7 @@ import requests
 import pandas as pd
 
 
-class APIObject:
-    """A core class for creating API objects for data preprocessing. It
-    contains general verification for successful requests upon class creation.
-
-    Args:
-        response: A `requests.Response` object to be stored as an attribute
-            of the same name.
-
-    Attributes:
-        response: The `requests.Response` object passed
-
-    Raises:
-            HTTPError: The request made did not return a `Response<200>`
-                status code.
-    """
-
-    def __init__(self, response: requests.Response):
-        response.raise_for_status()
-        self.response = response
-
-
-class MessariBaseObject(APIObject):
+class MessariBaseObject:
     """A generic class for creating classes from responses in Messari web API.
     Details on the request status including timestamp of GET request and
     request duration are also processed through this class.
@@ -70,7 +49,8 @@ class MessariBaseObject(APIObject):
     """
 
     def __init__(self, response: requests.Response):
-        super().__init__(response=response)
+        response.raise_for_status()
+        self.response = response
         self.content = self.response.json()
         self.timestamp = datetime.strptime(
             self.content['status']['timestamp'][:19],
