@@ -138,7 +138,6 @@ class ModelPipeline:
         Returns:
             A tuple of batch datasets (x_batched, y_batched)
         """
-
         xresult = []
         yresult = []
 

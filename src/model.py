@@ -68,7 +68,6 @@ class Encoder(tf.keras.layers.Layer):
         core_dense = tf.keras.layers.Dense(1)
         self.init_resolve = tf.keras.layers.TimeDistributed(core_dense)
 
-
     def call(self, x):
         """A method to call the model that acts as the __call__() method.
 
@@ -145,6 +144,7 @@ class Decoder(tf.keras.layers.Layer):
         preds = preds.stack()
 
         return tf.transpose(preds, perm=[1, 0, 2])
+
 
 class BitcoinRNN(tf.keras.Model):
     """A Tensorflow RNN model with a sequence to sequence (Seq2Seq) framework

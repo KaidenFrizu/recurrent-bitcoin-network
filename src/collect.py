@@ -242,7 +242,6 @@ class MessariCollector(APICollector):
         .. _Messari API documentation:
         https://messari.io/api/docs#operation/Get%20Asset%20timeseries
         """
-
         # Instantiate a dummy list for passing to .join() method
         if columns is None:
             columns = []
