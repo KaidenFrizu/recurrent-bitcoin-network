@@ -74,15 +74,16 @@ class MessariMetrics(MessariBaseObject):
     requesting time series data in Messari.
 
     Args:
-        response: A `requests.Response` object to be stored as an attribute
-            of the same name.
+        response: A `requests.Response` object from Messari web API.
 
     Attributes:
+        response: A `requests.Response` object stored as an attribute.
         content: The content returned in json (dict) format
         timestamp: A string of a timestamp that signifies the time the reuqest
             took place.
         elapsed: The duration of the GET request from its request to its
             returned response.
+        raw: A raw `pandas.DataFrame` of `data` without transformations.
         data: A `pandas.DataFrame` that shows a list of metrics with
             corresponding descriptions and `metric_id` for requesting time
             series data in Messari web API.
@@ -90,7 +91,24 @@ class MessariMetrics(MessariBaseObject):
 
     def __init__(self, response: requests.Response):
         super().__init__(response=response)
-        self.data = pd.DataFrame(self.content['data']['metrics'])
+        self.raw = pd.DataFrame(self.content['data']['metrics'])
+        self._clean_data()
+
+    def _clean_data(self) -> pd.DataFrame:
+        self.data = self.raw.copy()
+
+        self.data['source_name'] = self.data['source_attribution'].apply(
+            lambda x: x[0]['name'] if x != [] else None
+        )
+        self.data['source_url'] = self.data['source_attribution'].apply(
+            lambda x: x[0]['url'] if x != [] else None
+        )
+
+        self.data.drop(
+            ['source_attribution', 'values_schema'],
+            axis=1,
+            inplace=True
+        )
         self.data.set_index('metric_id', inplace=True)
         self.data.sort_index(inplace=True)
 
@@ -108,24 +126,6 @@ class MessariMetrics(MessariBaseObject):
         mask = self.data['role_restriction'].isna()
 
         return self.data[mask]
-
-    def get_bitcoin_metrics(self) -> pd.DataFrame:
-        """Retrieves all possible metrics for BTC (Bitcoin) time series.
-        Besides its filter for free metrics, certain metrics would be removed
-        because of incomplete values or they do not support BTC.
-
-        Returns:
-            A `pandas.DataFrame` of available BTC metrics.
-        """
-        free_data = self.get_free_metrics()
-
-        metrics_to_remove = [
-            'cg.sply.circ', 'sply.liquid', 'txn.tfr.erc20.cnt',
-            'txn.tfr.erc721.cnt', 'reddit.subscribers',
-            'reddit.active.users'
-        ]
-
-        return free_data.drop(metrics_to_remove)
 
 
 class MessariTimeseries(MessariBaseObject):
@@ -190,12 +190,6 @@ class MessariTimeseries(MessariBaseObject):
         self._load_data()
 
     def _load_data(self):
-        """A private method used to load the data through `pandas.DataFrame`.
-
-        General preprocessing is done through this method which includes
-        conversion of timestamps to a `datetime` object, and inclusion of
-        column names.
-        """
         self.data = pd.DataFrame(
             self.content['data']['values'],
             columns=self.parameters['columns'],

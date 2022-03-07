@@ -28,6 +28,7 @@ from typing import Union
 import re
 import time
 import requests
+import pandas as pd
 from tqdm import tqdm
 import apiobjects
 from _url import MESSARI_METRICS_URL
@@ -189,7 +190,9 @@ class MessariCollector(APICollector):
         order: Optional[Literal['asc', 'desc']] = None,
         formatting: Optional[Literal['csv', 'json']] = 'json',
         timestamp_format: Optional[str] = 'rfc3339',
-    ) -> apiobjects.MessariTimeseries:
+        raise_status: Optional[bool] = True,
+        return_response: Optional[bool] = False,
+    ) -> Union[apiobjects.MessariTimeseries, requests.Response]:
         """Retrieves a response request of time series from Messari API with
         the given parameters.
 
@@ -228,14 +231,18 @@ class MessariCollector(APICollector):
             timestamp_format: Determines the format of the timestamp column
                 in the time series data. One of 'unix-millisecond',
                 'unix-second', or 'rfc3339'
+            raise_status: Sets whether to raise non-200 status codes.
+            return_response: Sets whether to return a `requests.Response`
+                object instead of `apiobjects.MessariTimeseries`
 
         Returns:
-            A `apiobjects.MessariTimeseries` object.
+            A `apiobjects.MessariTimeseries` object. Returns a
+                `requests.Response` instead if `return_response=False`.
 
         Raises:
             ConnectionError: The request made has lost its connection.
             HTTPError: The request made did not return a `Response<200>`
-                status code.
+                status code. Applicable only when `raise_status=True`.
 
         .. _Messari API documentation:
         https://messari.io/api/docs#operation/Get%20Asset%20timeseries
@@ -251,18 +258,25 @@ class MessariCollector(APICollector):
             'format': formatting, 'timestamp-format': timestamp_format
         }
 
-        response = self.get_request(url, raise_status=True, params=params)
+        response = self.get_request(
+            url,
+            raise_status=raise_status,
+            params=params
+        )
+
+        if return_response:
+            return response
 
         return apiobjects.MessariTimeseries(response)
 
-    def get_fulldata(
+    def get_batch_data(
         self,
         assetkey: str,
+        metrics: Union[list[str], pd.Series, pd.Index],
         start: str,
         end: str,
-        only_freemetrics: Optional[bool] = True,
     ) -> list[apiobjects.MessariTimeseries, ...]:
-        """Retrieves the complete time series data from each available metric.
+        """Retrieves a set of time series data from each given metric.
 
         It uses the method `get_timeseries()` multiple times to retrieve time
         series data with different metrics. A tqdm progress bar would be
@@ -271,6 +285,8 @@ class MessariCollector(APICollector):
         Args:
             assetkey: An ID, name, or an abbreviation of a particular
                 cryptocurrency to be retrieved.
+            metrics: A list of metrics to retrieve its corresponding time
+                series.
             start: A date in %Y-%m-%d format that sets the starting point of
                 the time series data to be collected. A default start date
                 would be provided by Messari if not specified.
@@ -286,44 +302,46 @@ class MessariCollector(APICollector):
             HTTPError: The request made did not return a `Response<200>`
                 status code.
         """
-        metrics_list = self.get_metrics()
-
-        if only_freemetrics:
-            metrics = metrics_list.get_free_metrics()
-        else:
-            metrics = metrics_list.data
+        if not isinstance(metrics, pd.Series):
+            metrics = pd.Series(metrics)
 
         data_list = []
 
-        with tqdm(total=len(metrics.index)) as pbar:
-            for metric in metrics.index:
-                statuscode = 0
+        with tqdm(total=metrics.shape[0], unit='metric') as pbar:
+            for metric in metrics:
+                pbar.set_description(metric)
 
-                while statuscode != 200:
-                    try:
-                        result = self.get_timeseries(
-                            assetkey=assetkey, metric_id=metric,
-                            start=start, end=end
-                        )
-                        statuscode = result.response.status_code
-                        data_list.append(result)
-                        pbar.update(1)
+                response = self.get_timeseries(
+                    assetkey=assetkey,
+                    metric_id=metric,
+                    start=start,
+                    end=end,
+                    raise_status=False,
+                    return_response=True
+                )
 
-                    except requests.exceptions.HTTPError as err:
-                        errdata = err.response.json()
-                        statuscode = err.response.status_code
-                        errmessage = errdata['status']['error_message']
-                        errtxt = f'Response [{statuscode}]: {errmessage}'
-                        pbar.write(errtxt)
+                while response.status_code != 200:
+                    data = response.json()
+                    msg = data['status']['error_message']
+                    pbar.write(f'Response [{response.status_code}]: {msg}')
 
-                        if statuscode == 429:
-                            timer_int = re.findall(r"\d+", errmessage)
-                            cooldown = int(timer_int[0]) + 1
-                            time.sleep(cooldown)
-                        elif statuscode >= 500:
-                            pbar.update(1)
-                            break
-                        else:
-                            raise err
+                    if response.status_code == 429:
+                        timer_int = re.findall(r"\d+", msg)
+                        cooldown = int(timer_int[0]) + 1
+                        time.sleep(cooldown)
+                    else:
+                        response.raise_for_status()
+
+                    response = self.get_timeseries(
+                        assetkey=assetkey,
+                        metric_id=metric,
+                        start=start,
+                        end=end,
+                        raise_status=False,
+                        return_response=True
+                    )
+
+                data_list.append(apiobjects.MessariTimeseries(response))
+                pbar.update(1)
 
         return data_list
