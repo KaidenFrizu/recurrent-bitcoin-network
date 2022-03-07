@@ -8,3 +8,6 @@ enabled = true
 
   [analyzers.meta]
   runtime_version = "3.x.x"
+  type_checker = "mypy"
+  max_line_length = 79
+  skip_doc_coverage = ["magic", "init", "nonpublic"]

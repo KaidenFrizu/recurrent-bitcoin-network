@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn.decomposition import TruncatedSVD
+from sklearn.preprocessing import MinMaxScaler
 import model
 
 
@@ -42,6 +43,8 @@ class ModelPipeline:
         window_rate
         tensorboard_dir
         checkpoint_dir
+        svd
+        scaler
         tfmodel
         tbcallback
         checkpoint
@@ -71,6 +74,8 @@ class ModelPipeline:
                 n_components=self.k_components,
                 algorithm='arpack'
             )
+
+        self.scaler = MinMaxScaler()
 
         self.tfmodel = model.BitcoinRNN(
             input_length=self.input_length,
@@ -112,6 +117,30 @@ class ModelPipeline:
                 self.svd.fit_transform(xdata.values),
                 index=xdata.index
             )
+
+        return xdata[:date_slice], xdata[date_slice:]
+
+    def normalize(
+        self,
+        xtrain: pd.DataFrame,
+        xtest: pd.DataFrame,
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Applies scaling to normalize features.
+
+        Args:
+            xtrain: A `pandas.DataFrame` of features in the training set.
+            xtest: A `pandas.DataFrame` of features in the test set.
+
+        Returns:
+            A tuple of normalized values: (xtrain, xtest).
+        """
+        date_slice = xtest.index[0]
+        xdata = pd.concat([xtrain, xtest])
+        xdata = pd.DataFrame(
+            self.scaler.fit_transform(xdata.values),
+            index=xdata.index,
+            columns=xdata.columns,
+        )
 
         return xdata[:date_slice], xdata[date_slice:]
 
@@ -158,8 +187,8 @@ class ModelPipeline:
         train_targets: list[pd.Series],
         test_features: list[pd.DataFrame],
         test_targets: list[pd.Series],
-        batch_size: Optional[int] = 64,
-        epochs: Optional[int] = 100,
+        batch_size: Optional[int] = 96,
+        epochs: Optional[int] = 300,
         **kwargs
     ):
         """A method that is passed to the Tensorflow model `.fit()` method
@@ -188,14 +217,20 @@ class ModelPipeline:
             y=train_targets,
             batch_size=batch_size,
             epochs=epochs,
-            steps_per_epoch=28,
             validation_data=(test_features, test_targets),
             callbacks=[self.tbcallback, self.checkpoint],
             **kwargs
         )
 
     def reload(self, checkpoint_path: Optional[str] = None, **kwargs):
-        """Reload current model weights"""
+        """Reload current model weights
+
+        Args:
+            checkpoint_path: The checkpoint path containing model weights.
+                defaults to `logs/models/{model_name}`.
+            kwargs: Addition key-value pairs to be passed on `.load_weights()`
+                method
+        """
         if checkpoint_path is None:
             checkpoint_path = self.checkpoint_dir
 
