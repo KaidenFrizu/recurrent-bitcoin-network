@@ -216,8 +216,6 @@ class MessariTimeseries(MessariBaseObject):
         `id_vars` while the rest of the columns would be treated as
         `value_vars` in melting the time series data.
 
-        For more info, see `pandas.DataFrame.melt()`_
-
         Args:
             id_vars: Column(s) that would be treated as identifier variables.
             value_vars: Columns(s) that would be used to unpivot.
@@ -227,9 +225,6 @@ class MessariTimeseries(MessariBaseObject):
 
         Returns:
             A `pandas.DataFrame` of melted data
-
-        .. _pandas.DataFrame.melt():
-            https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.melt.html#pandas.DataFrame.melt
         """
         if id_vars is None:
             id_vars = ['timestamp', 'metric']
