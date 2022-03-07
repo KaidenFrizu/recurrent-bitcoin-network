@@ -224,7 +224,7 @@ class ModelPipeline:
 
     def reload(self, checkpoint_path: Optional[str] = None, **kwargs):
         """Reload current model weights
-        
+
         Args:
             checkpoint_path: The checkpoint path containing model weights.
                 defaults to `logs/models/{model_name}`.
