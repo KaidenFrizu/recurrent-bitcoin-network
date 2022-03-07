@@ -4,15 +4,15 @@
 
 ### About
 
-This repository is part of our Data Science Undergraduate Thesis. It contains the source code for implementing Bitcoin price prediciton using a Seq2Seq RNN architecture via TensorFlow.
+This repository is part of our Data Science Undergraduate Thesis. It contains the source code for implementing Bitcoin price prediciton using a Seq2Seq-AR RNN architecture via TensorFlow.
 
-The data was collected through [Messari](https://messari.io/) API. The documentation can be found [here](https://messari.io/api/docs).
+The data was collected through [Messari](https://messari.io/) web API. The documentation can be found [here](https://messari.io/api/docs).
 
 ---
 
 ### Disclaimer
 
-This project is only used for academic purposes, with no implications on its feasibility in actual price forecasting. We are not accountable for any loss or failures in your investments for any implementations of this project. This is NOT financial advice. For details, refer to the [GNU General Public License v3.0](LICENSE).
+This project is only used for academic purposes, with no implications on its feasibility in actual price forecasting. We are not accountable for any loss or failures in your investments for any implementations of this project. This is NOT financial advice. For details, see [GNU General Public License v3.0](LICENSE).
 
 ---
 
@@ -38,16 +38,16 @@ You can reproduce this project through these general instructions.
 python -m venv .env
 ```
 
-4. Afterwards, install the packages found in `requirements.txt`. The most efficient way to install these packages is through the terminal with the following command. This would take a while as it has approximately 400MB download size.
+4. Afterwards, install the packages found in `requirements.txt`. The most efficient way to install these packages is through a terminal with the following command. Note that this would take a while as it has approximately 400MB download size specifically for TensorFlow.
 
 ```ps
 pip install -r requirements.txt
 ```
 
-5. Run the notebooks `Documentation.ipynb` and `Modelling.ipynb`. These are found in [docs](docs) folder.
+1. You can now run `Documentation.ipynb` found in [docs](docs) folder to see the model in action.
 
 ---
 
 ### Contributing
 
-To contribute, see the [contributing guidelines](CONTRIBUTING.md).
+To contribute, see the [contributing](CONTRIBUTING.md) guidelines.
