@@ -16,7 +16,9 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from typing import Optional
+import os
 import configparser
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -66,9 +68,6 @@ class ModelPipeline:
         self.units = int(parser_section['units'])
         self.window_rate = int(parser_section['window_rate'])
 
-        self.tensorboard_dir = '../logs/tensorboard/' + self.model_name
-        self.checkpoint_dir = '../logs/models/' + self.model_name + '/'
-
         if self.k_components > 0:
             self.svd = TruncatedSVD(
                 n_components=self.k_components,
@@ -84,6 +83,32 @@ class ModelPipeline:
             model_name=self.model_name,
             units=self.units
         )
+
+        self._set_callback_dir()
+        self._set_callbacks()
+
+    def _set_callback_dir(self):
+        tbdir = os.path.join(
+            os.getcwd(),
+            '..',
+            'logs',
+            'tensorboard',
+            self.model_name,
+            datetime.now().strftime('%Y-%m-%dT%H%M%S'),
+        )
+        ckpt = os.path.join(
+            os.getcwd(),
+            '..',
+            'logs',
+            'weights',
+            self.model_name,  # Would treat as folder directory
+            self.model_name,  # For filename use
+        )
+
+        self.tensorboard_dir = os.path.abspath(tbdir)
+        self.checkpoint_dir = os.path.abspath(ckpt)
+
+    def _set_callbacks(self):
         self.tbcallback = tf.keras.callbacks.TensorBoard(
             log_dir=self.tensorboard_dir,
             histogram_freq=1,
@@ -189,6 +214,7 @@ class ModelPipeline:
         test_targets: list[pd.Series],
         batch_size: Optional[int] = 96,
         epochs: Optional[int] = 300,
+        new_callback_dir: Optional[bool] = True,
         **kwargs
     ):
         """A method that is passed to the Tensorflow model `.fit()` method
@@ -206,11 +232,17 @@ class ModelPipeline:
                 1)` to be used as a guideline for prediction given `features`.
             batch_size: The number of batches used per epoch.
             epochs: The number of epochs
+            new_callback_dir: Sets whether to set another TensorBoard
+                directory for another training run.
         """
         train_features = np.array([df.to_numpy() for df in train_features])
         train_targets = np.array([tgt.to_numpy() for tgt in train_targets])
         test_features = np.array([df.to_numpy() for df in test_features])
         test_targets = np.array([tgt.to_numpy() for tgt in test_targets])
+
+        if new_callback_dir:
+            self._set_callback_dir()
+            self._set_callbacks()
 
         self.tfmodel.fit(
             x=train_features,
