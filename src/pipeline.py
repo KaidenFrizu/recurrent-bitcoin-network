@@ -16,7 +16,9 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from typing import Optional
+import os
 import configparser
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -66,9 +68,6 @@ class ModelPipeline:
         self.units = int(parser_section['units'])
         self.window_rate = int(parser_section['window_rate'])
 
-        self.tensorboard_dir = '../logs/tensorboard/' + self.model_name
-        self.checkpoint_dir = '../logs/models/' + self.model_name + '/'
-
         if self.k_components > 0:
             self.svd = TruncatedSVD(
                 n_components=self.k_components,
@@ -84,6 +83,8 @@ class ModelPipeline:
             model_name=self.model_name,
             units=self.units
         )
+
+        self._set_callback_dir()
         self.tbcallback = tf.keras.callbacks.TensorBoard(
             log_dir=self.tensorboard_dir,
             histogram_freq=1,
@@ -95,6 +96,27 @@ class ModelPipeline:
             save_weights_only=True,
             mode='min',
         )
+
+    def _set_callback_dir(self):
+        tbdir = os.path.join(
+            os.getcwd(),
+            '..',
+            'logs',
+            'tensorboard',
+            self.model_name,
+            datetime.now().strftime('%Y-%m-%dT%H%M%S'),
+        )
+        ckpt = os.path.join(
+            os.getcwd(),
+            '..',
+            'logs',
+            'weights',
+            self.model_name,  # Would treat as folder directory
+            self.model_name,  # For filename use
+        )
+
+        self.tensorboard_dir = os.path.abspath(tbdir)
+        self.checkpoint_dir = os.path.abspath(ckpt)
 
     def apply_svd(
         self,
