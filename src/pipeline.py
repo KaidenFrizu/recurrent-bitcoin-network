@@ -108,7 +108,7 @@ class ModelPipeline:
         self.tensorboard_dir = os.path.abspath(tbdir)
         self.checkpoint_dir = os.path.abspath(ckpt)
 
-    def _set_callbacks():
+    def _set_callbacks(self):
         self.tbcallback = tf.keras.callbacks.TensorBoard(
             log_dir=self.tensorboard_dir,
             histogram_freq=1,
