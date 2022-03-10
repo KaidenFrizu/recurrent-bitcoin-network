@@ -214,6 +214,7 @@ class ModelPipeline:
         test_targets: list[pd.Series],
         batch_size: Optional[int] = 96,
         epochs: Optional[int] = 300,
+        new_callback_dir: Optional[bool] = True,
         **kwargs
     ):
         """A method that is passed to the Tensorflow model `.fit()` method
@@ -231,11 +232,17 @@ class ModelPipeline:
                 1)` to be used as a guideline for prediction given `features`.
             batch_size: The number of batches used per epoch.
             epochs: The number of epochs
+            new_callback_dir: Sets whether to set another TensorBoard
+                directory for another training run.
         """
         train_features = np.array([df.to_numpy() for df in train_features])
         train_targets = np.array([tgt.to_numpy() for tgt in train_targets])
         test_features = np.array([df.to_numpy() for df in test_features])
         test_targets = np.array([tgt.to_numpy() for tgt in test_targets])
+
+        if new_callback_dir:
+            self._set_callback_dir()
+            self._set_callbacks()
 
         self.tfmodel.fit(
             x=train_features,
