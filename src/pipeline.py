@@ -85,17 +85,7 @@ class ModelPipeline:
         )
 
         self._set_callback_dir()
-        self.tbcallback = tf.keras.callbacks.TensorBoard(
-            log_dir=self.tensorboard_dir,
-            histogram_freq=1,
-        )
-        self.checkpoint = tf.keras.callbacks.ModelCheckpoint(
-            filepath=self.checkpoint_dir,
-            monitor='loss',
-            save_best_only=True,
-            save_weights_only=True,
-            mode='min',
-        )
+        self._set_callbacks()
 
     def _set_callback_dir(self):
         tbdir = os.path.join(
@@ -117,6 +107,19 @@ class ModelPipeline:
 
         self.tensorboard_dir = os.path.abspath(tbdir)
         self.checkpoint_dir = os.path.abspath(ckpt)
+
+    def _set_callbacks():
+        self.tbcallback = tf.keras.callbacks.TensorBoard(
+            log_dir=self.tensorboard_dir,
+            histogram_freq=1,
+        )
+        self.checkpoint = tf.keras.callbacks.ModelCheckpoint(
+            filepath=self.checkpoint_dir,
+            monitor='loss',
+            save_best_only=True,
+            save_weights_only=True,
+            mode='min',
+        )
 
     def apply_svd(
         self,
