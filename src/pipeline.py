@@ -74,7 +74,9 @@ class ModelPipeline:
                 algorithm='arpack'
             )
 
-        self.scaler = MinMaxScaler()
+        self.scaler = MinMaxScaler(
+            feature_range=(0,1),
+        )
 
         self.tfmodel = model.BitcoinRNN(
             input_length=self.input_length,
@@ -212,8 +214,8 @@ class ModelPipeline:
         train_targets: list[pd.Series],
         test_features: list[pd.DataFrame],
         test_targets: list[pd.Series],
-        batch_size: Optional[int] = 96,
-        epochs: Optional[int] = 300,
+        batch_size: Optional[int] = 128,
+        epochs: Optional[int] = 100,
         new_callback_dir: Optional[bool] = True,
         **kwargs
     ):
@@ -255,7 +257,7 @@ class ModelPipeline:
         )
 
     def reload(self, checkpoint_path: Optional[str] = None, **kwargs):
-        """Reload current model weights
+        """Reload current model weights.
 
         Args:
             checkpoint_path: The checkpoint path containing model weights.
