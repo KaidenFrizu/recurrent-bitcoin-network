@@ -52,7 +52,7 @@ class Encoder(tf.keras.layers.Layer):
         )
         core_lstm = tf.keras.layers.LSTM(
             units=units,
-            activation='tanh',
+            activation=tf.keras.activations.swish,
             dropout=0.1,
             kernel_regularizer='l1',
             name='encoder_lstm',
@@ -112,7 +112,7 @@ class Decoder(tf.keras.layers.Layer):
 
         self.lstmcell = tf.keras.layers.LSTMCell(
             units=units,
-            activation='tanh',
+            activation=tf.keras.activations.swish,
             dropout=0.2,
             kernel_regularizer='l1',
             bias_regularizer='l2',
@@ -120,7 +120,7 @@ class Decoder(tf.keras.layers.Layer):
         )
         self.lstm = tf.keras.layers.LSTM(
             units=units,
-            activation='tanh',
+            activation=tf.keras.activations.swish,
             dropout=0.2,
             kernel_regularizer='l1',
             bias_regularizer='l2',
