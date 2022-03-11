@@ -52,8 +52,10 @@ class Encoder(tf.keras.layers.Layer):
         )
         core_lstm = tf.keras.layers.LSTM(
             units=units,
-            name='encoder_lstm',
             activation='tanh',
+            dropout=0.1,
+            kernel_regularizer='l1',
+            name='encoder_lstm',
             return_sequences=True,
         )
         self.lstm = tf.keras.layers.Bidirectional(
@@ -63,19 +65,21 @@ class Encoder(tf.keras.layers.Layer):
         core_dense = tf.keras.layers.Dense(1)
         self.init_resolve = tf.keras.layers.TimeDistributed(core_dense)
 
-    def call(self, x):
+    def call(self, x, training=None):
         """A method to call the model that acts as the __call__() method.
 
         See https://www.tensorflow.org/api_docs/python/tf/keras/layers/Layer
 
         Args:
             x: A tensor input
+            training: Determines whether to behave the decoder under training
+                mode. This would occur a dropout on the weights per epoch.
 
         Returns:
             A sequence of length (input_length, 1)
         """
         x = self.input_layer(x)
-        x = self.lstm(x)
+        x = self.lstm(x, training=training)
         return self.init_resolve(x)
 
 
@@ -109,31 +113,40 @@ class Decoder(tf.keras.layers.Layer):
         self.lstmcell = tf.keras.layers.LSTMCell(
             units=units,
             activation='tanh',
+            dropout=0.2,
+            kernel_regularizer='l1',
+            bias_regularizer='l2',
             name='AR_cell',
         )
         self.lstm = tf.keras.layers.LSTM(
             units=units,
-            return_state=True,
+            activation='tanh',
+            dropout=0.2,
+            kernel_regularizer='l1',
+            bias_regularizer='l2',
             name='decoder_lstm',
+            return_state=True,
         )
         self.resolve = tf.keras.layers.Dense(1)
 
-    def call(self, x):
+    def call(self, x, training=None):
         """A method to call the model that acts as the __call__() method.
 
         See https://www.tensorflow.org/api_docs/python/tf/keras/layers/Layer
 
         Args:
             x: A tensor input
+            training: Determines whether to behave the decoder under training
+                mode. This would occur a dropout on the weights per epoch.
 
         Returns:
             A sequence of length (horizon, 1)
         """
         preds = tf.TensorArray(tf.float32, size=self.horizon)
-        x, *states = self.lstm(x)
+        x, *states = self.lstm(x, training=training)
 
         for h in tf.range(self.horizon):
-            x, states = self.lstmcell(x, states=states)
+            x, states = self.lstmcell(x, states=states, training=training)
             x_resolve = self.resolve(x)
             preds = preds.write(h, x_resolve)
 
@@ -213,7 +226,7 @@ class BitcoinRNN(tf.keras.Model):
         )
         self.concat_output = tf.keras.layers.Concatenate(axis=1)
         optimizer = tf.keras.optimizers.Adam(
-            learning_rate=1e-02,
+            learning_rate=0.001,
             name='Optimizer'
         )
         self.compile(
@@ -237,8 +250,8 @@ class BitcoinRNN(tf.keras.Model):
             A 2D tensor of shape (input_length+horizon, 1) if `training=True`,
                 otherwise a 2D tensor of shape (horizon, 1).
         """
-        init_predictions = self.encoder(inputs)
-        future_predictions = self.decoder(init_predictions)
+        init_predictions = self.encoder(inputs, training=training)
+        future_predictions = self.decoder(init_predictions, training=training)
 
         if training:
             return self.concat_output([init_predictions, future_predictions])
