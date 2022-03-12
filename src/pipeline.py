@@ -77,7 +77,7 @@ class ModelPipeline:
             )
 
         self.minmaxscaler = MinMaxScaler(
-            feature_range=(0,1),
+            feature_range=(0, 1),
         )
         self.normalscaler = PowerTransformer(
             method='yeo-johnson',
