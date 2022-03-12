@@ -24,6 +24,7 @@ import pandas as pd
 import tensorflow as tf
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import PowerTransformer
 import model
 
 
@@ -65,7 +66,8 @@ class ModelPipeline:
         self.horizon = int(parser_section['horizon'])
         self.k_components = int(parser_section['k_components'])
         self.model_name = parser_section['model_name']
-        self.units = int(parser_section['units'])
+        self.encoder_units = int(parser_section['encoder_units'])
+        self.decoder_units = int(parser_section['decoder_units'])
         self.window_rate = int(parser_section['window_rate'])
 
         if self.k_components > 0:
@@ -74,14 +76,20 @@ class ModelPipeline:
                 algorithm='arpack'
             )
 
-        self.scaler = MinMaxScaler()
+        self.minmaxscaler = MinMaxScaler(
+            feature_range=(0, 1),
+        )
+        self.normalscaler = PowerTransformer(
+            method='yeo-johnson',
+        )
 
         self.tfmodel = model.BitcoinRNN(
             input_length=self.input_length,
             horizon=self.horizon,
             n_features=self.k_components,
             model_name=self.model_name,
-            units=self.units
+            encoder_units=self.encoder_units,
+            decoder_units=self.decoder_units
         )
 
         self._set_callback_dir()
@@ -120,6 +128,16 @@ class ModelPipeline:
             save_weights_only=True,
             mode='min',
         )
+        self.nancallback = tf.keras.callbacks.TerminateOnNaN()
+        self.scheduler = tf.keras.callbacks.LearningRateScheduler(
+            lambda ep, rate: rate if ep < 30 else rate * tf.math.exp(-0.05)
+        )
+        self.callback_list = [
+            self.tbcallback,
+            self.checkpoint,
+            self.nancallback,
+            self.scheduler,
+        ]
 
     def apply_svd(
         self,
@@ -161,8 +179,11 @@ class ModelPipeline:
         """
         date_slice = xtest.index[0]
         xdata = pd.concat([xtrain, xtest])
+
+        init_scale = self.minmaxscaler.fit_transform(xdata.values)
+        final_scale = self.normalscaler.fit_transform(init_scale)
         xdata = pd.DataFrame(
-            self.scaler.fit_transform(xdata.values),
+            final_scale,
             index=xdata.index,
             columns=xdata.columns,
         )
@@ -212,8 +233,8 @@ class ModelPipeline:
         train_targets: list[pd.Series],
         test_features: list[pd.DataFrame],
         test_targets: list[pd.Series],
-        batch_size: Optional[int] = 96,
-        epochs: Optional[int] = 300,
+        batch_size: Optional[int] = 128,
+        epochs: Optional[int] = 100,
         new_callback_dir: Optional[bool] = True,
         **kwargs
     ):
@@ -250,12 +271,12 @@ class ModelPipeline:
             batch_size=batch_size,
             epochs=epochs,
             validation_data=(test_features, test_targets),
-            callbacks=[self.tbcallback, self.checkpoint],
+            callbacks=self.callback_list,
             **kwargs
         )
 
     def reload(self, checkpoint_path: Optional[str] = None, **kwargs):
-        """Reload current model weights
+        """Reload current model weights.
 
         Args:
             checkpoint_path: The checkpoint path containing model weights.
