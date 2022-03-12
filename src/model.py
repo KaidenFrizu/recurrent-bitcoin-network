@@ -53,14 +53,14 @@ class Encoder(tf.keras.layers.Layer):
         core_lstm = tf.keras.layers.LSTM(
             units=units,
             activation=tf.keras.activations.swish,
-            dropout=0.1,
+            dropout=0.2,
             kernel_regularizer='l1',
             name='encoder_lstm',
             return_sequences=True,
         )
         self.lstm = tf.keras.layers.Bidirectional(
             layer=core_lstm,
-            merge_mode='concat',
+            merge_mode='sum',
         )
         core_dense = tf.keras.layers.Dense(1)
         self.init_resolve = tf.keras.layers.TimeDistributed(core_dense)
@@ -173,8 +173,8 @@ class BitcoinRNN(tf.keras.Model):
         n_features: The number of features to be fed as past inputs.
         model_name: The ame of the RNN model. An initial name is provided
             which indicates the time this class was instantiated.
-        units: The number of LSTM units to be created on both LSTM encoder
-            and decoder.
+        encoder_units: The number of LSTM units to be created on LSTM encoder.
+        decoder_units: The number of LSTM units to be created on LSTM encoder.
         **kwargs: Additional arguments passed on `tensorflow.keras.Model`.
 
     Attributes:
@@ -184,8 +184,8 @@ class BitcoinRNN(tf.keras.Model):
         n_features: The number of features to be fed as past inputs.
         model_name: The name of the RNN model. An initial name is provided
             which indicates the time this class was instantiated.
-        units: The number of LSTM units to be created on both LSTM encoder
-            and decoder.
+        encoder_units: The number of LSTM units to be created on LSTM encoder.
+        decoder_units: The number of LSTM units to be created on LSTM encoder.
         encoder: A `model.Encoder` layer that comprises the encoding phase of
             the Seq2Seq model.
         decoder: A `model.Decoder` layer that comprises the decoding phase of
@@ -200,7 +200,8 @@ class BitcoinRNN(tf.keras.Model):
         horizon: int,
         n_features: int,
         model_name: Optional[str] = None,
-        units: Optional[int] = 125,
+        encoder_units: Optional[int] = 100,
+        decoder_units: Optional[int] = 20,
         **kwargs
     ):
         if model_name is None:
@@ -213,20 +214,21 @@ class BitcoinRNN(tf.keras.Model):
         self.horizon = horizon
         self.n_features = n_features
         self.model_name = model_name
-        self.units = units
+        self.encoder_units = encoder_units
+        self.decoder_units = decoder_units
 
         self.encoder = Encoder(
             input_length=self.input_length,
             n_features=self.n_features,
-            units=self.units,
+            units=self.encoder_units,
         )
         self.decoder = Decoder(
-            units=self.units,
+            units=self.decoder_units,
             horizon=self.horizon,
         )
         self.concat_output = tf.keras.layers.Concatenate(axis=1)
         optimizer = tf.keras.optimizers.Adam(
-            learning_rate=0.001,
+            learning_rate=0.002,
             name='Optimizer'
         )
         self.compile(
