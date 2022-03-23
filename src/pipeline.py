@@ -22,10 +22,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from sklearn.decomposition import TruncatedSVD
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import PowerTransformer
 import model
+import transformer
 
 
 class ModelPipeline:
@@ -46,8 +44,7 @@ class ModelPipeline:
         window_rate
         tensorboard_dir
         checkpoint_dir
-        svd
-        scaler
+        transformer
         tfmodel
         tbcallback
         checkpoint
@@ -70,17 +67,11 @@ class ModelPipeline:
         self.decoder_units = int(parser_section['decoder_units'])
         self.window_rate = int(parser_section['window_rate'])
 
-        if self.k_components > 0:
-            self.svd = TruncatedSVD(
-                n_components=self.k_components,
-                algorithm='arpack'
-            )
-
-        self.minmaxscaler = MinMaxScaler(
-            feature_range=(0, 1),
-        )
-        self.normalscaler = PowerTransformer(
-            method='yeo-johnson',
+        self.transformer = transformer.DataTransformer(
+            input_length=self.input_length,
+            horizon=self.horizon,
+            window_rate=self.window_rate,
+            k_components=self.k_components,
         )
 
         self.tfmodel = model.BitcoinRNN(
@@ -138,94 +129,6 @@ class ModelPipeline:
             self.nancallback,
             self.scheduler,
         ]
-
-    def apply_svd(
-        self,
-        xtrain: pd.DataFrame,
-        xtest: pd.DataFrame,
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Applies SVD transformation to x inputs.
-
-        Args:
-            xtrain: A `pandas.DataFrame` of features in the training set.
-            xtest: A `pandas.DataFrame` of features in the test set.
-
-        Returns:
-            A tuple of SVD transformed values: (xtrain, xtest).
-        """
-        date_slice = xtest.index[0]
-        xdata = pd.concat([xtrain, xtest])
-        if self.k_components > 0:
-            xdata = pd.DataFrame(
-                self.svd.fit_transform(xdata.values),
-                index=xdata.index
-            )
-
-        return xdata[:date_slice], xdata[date_slice:]
-
-    def normalize(
-        self,
-        xtrain: pd.DataFrame,
-        xtest: pd.DataFrame,
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Applies scaling to normalize features.
-
-        Args:
-            xtrain: A `pandas.DataFrame` of features in the training set.
-            xtest: A `pandas.DataFrame` of features in the test set.
-
-        Returns:
-            A tuple of normalized values: (xtrain, xtest).
-        """
-        date_slice = xtest.index[0]
-        xdata = pd.concat([xtrain, xtest])
-
-        init_scale = self.minmaxscaler.fit_transform(xdata.values)
-        final_scale = self.normalscaler.fit_transform(init_scale)
-        xdata = pd.DataFrame(
-            final_scale,
-            index=xdata.index,
-            columns=xdata.columns,
-        )
-
-        return xdata[:date_slice], xdata[date_slice:]
-
-    def create_dataset(
-        self,
-        xdata: pd.DataFrame,
-        ydata: pd.Series,
-        return_train_y: Optional[bool] = False,
-    ) -> tuple[list[pd.DataFrame], list[pd.Series]]:
-        """Creates time series batch datasets based on the given window rate.
-
-        Note that the creation of samples are given in a constant window rate
-        which does not involve random sampling.
-
-        Args:
-            xdata: A `pandas.DataFrame` of features.
-            ydata: A `pandas.Series` of target values.
-            return_train_y: Determines whether to include current timesteps
-                of y values in the batches.
-
-        Returns:
-            A tuple of batch datasets (x_batched, y_batched)
-        """
-        xresult = []
-        yresult = []
-
-        start = 0
-        while start + self.input_length + self.horizon <= ydata.shape[0]:
-            stop_window = start + self.input_length
-            xresult.append(xdata[start:stop_window])
-
-            if return_train_y:
-                yresult.append(ydata[start:stop_window+self.horizon])
-            else:
-                yresult.append(ydata[stop_window:stop_window+self.horizon])
-
-            start += self.window_rate
-
-        return xresult, yresult
 
     def model_train(
         self,
