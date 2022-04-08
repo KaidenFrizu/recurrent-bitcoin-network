@@ -18,7 +18,7 @@ from datetime import datetime
 import tensorflow as tf
 
 
-class Encoder(tf.keras.layers.Layer):
+class Encoder(tf.keras.Model):
     """A custom Tensorflow layer dedicated for the encoding phase of the
     Seq2Seq model.
 
@@ -39,31 +39,26 @@ class Encoder(tf.keras.layers.Layer):
 
     def __init__(
         self,
-        input_length: int,
-        n_features: int,
         units: int,
     ):
 
         super().__init__(name='Encoder')
 
-        self.input_layer = tf.keras.layers.InputLayer(
-            input_shape=(input_length, n_features),
-            name='input_encoder',
-        )
-        core_lstm = tf.keras.layers.LSTM(
+        self.core_lstm = tf.keras.layers.LSTM(
             units=units,
             activation=tf.keras.activations.swish,
-            dropout=0.2,
-            kernel_regularizer='l1',
+            dropout=0,
+            kernel_initializer=tf.keras.initializers.RandomUniform(seed=306),
+            kernel_regularizer='l2',
+            bias_initializer=tf.keras.initializers.RandomUniform(seed=306),
+            bias_regularizer='l1',
             name='encoder_lstm',
             return_sequences=True,
         )
-        self.lstm = tf.keras.layers.Bidirectional(
-            layer=core_lstm,
-            merge_mode='sum',
+        self.bilstm = tf.keras.layers.Bidirectional(
+            layer=self.core_lstm,
+            merge_mode='concat',
         )
-        core_dense = tf.keras.layers.Dense(1)
-        self.init_resolve = tf.keras.layers.TimeDistributed(core_dense)
 
     def call(self, x, training=None):
         """A method to call the model that acts as the __call__() method.
@@ -78,12 +73,10 @@ class Encoder(tf.keras.layers.Layer):
         Returns:
             A sequence of length (input_length, 1)
         """
-        x = self.input_layer(x)
-        x = self.lstm(x, training=training)
-        return self.init_resolve(x)
+        return self.bilstm(x, training=training)
 
 
-class Decoder(tf.keras.layers.Layer):
+class Decoder(tf.keras.Model):
     """A custom Tensorflow layer dedicated for the decoding phase of the
     Seq2Seq model.
 
@@ -110,24 +103,22 @@ class Decoder(tf.keras.layers.Layer):
 
         self.horizon = horizon
 
-        self.lstmcell = tf.keras.layers.LSTMCell(
-            units=units,
-            activation=tf.keras.activations.swish,
-            dropout=0.2,
-            kernel_regularizer='l1',
-            bias_regularizer='l2',
-            name='AR_cell',
-        )
         self.lstm = tf.keras.layers.LSTM(
             units=units,
             activation=tf.keras.activations.swish,
-            dropout=0.2,
+            dropout=0,
             kernel_regularizer='l1',
-            bias_regularizer='l2',
+            kernel_initializer=tf.keras.initializers.RandomUniform(seed=306),
+            bias_regularizer=None,
+            bias_initializer=tf.keras.initializers.RandomUniform(seed=306),
             name='decoder_lstm',
-            return_state=True,
+            return_sequences=True,
         )
-        self.resolve = tf.keras.layers.Dense(1)
+        self.flatlayer = tf.keras.layers.Flatten(name='flat_layer')
+        self.resolve = tf.keras.layers.Dense(
+            units=self.horizon,
+            name='predict'
+        )
 
     def call(self, x, training=None):
         """A method to call the model that acts as the __call__() method.
@@ -142,18 +133,10 @@ class Decoder(tf.keras.layers.Layer):
         Returns:
             A sequence of length (horizon, 1)
         """
-        preds = tf.TensorArray(tf.float32, size=self.horizon)
-        x, *states = self.lstm(x, training=training)
+        x = self.lstm(x, training=training)
+        x = self.flatlayer(x)
 
-        for h in tf.range(self.horizon):
-            x, states = self.lstmcell(x, states=states, training=training)
-            x_resolve = self.resolve(x)
-            preds = preds.write(h, x_resolve)
-
-        preds = preds.stack()
-
-        return tf.transpose(preds, perm=[1, 0, 2])
-
+        return self.resolve(x)
 
 class BitcoinRNN(tf.keras.Model):
     """A Tensorflow RNN model with a sequence to sequence (Seq2Seq) framework
@@ -198,8 +181,8 @@ class BitcoinRNN(tf.keras.Model):
         self,
         input_length: int,
         horizon: int,
-        n_features: int,
         model_name: Optional[str] = None,
+        n_features: Optional[int] = None,
         encoder_units: Optional[int] = 100,
         decoder_units: Optional[int] = 20,
         **kwargs
@@ -217,24 +200,29 @@ class BitcoinRNN(tf.keras.Model):
         self.encoder_units = encoder_units
         self.decoder_units = decoder_units
 
+        self.input_layer = tf.keras.layers.InputLayer(
+            input_shape=(self.input_length, self.n_features),
+            name='input_encoder',
+        )
         self.encoder = Encoder(
-            input_length=self.input_length,
-            n_features=self.n_features,
             units=self.encoder_units,
         )
         self.decoder = Decoder(
             units=self.decoder_units,
             horizon=self.horizon,
         )
-        self.concat_output = tf.keras.layers.Concatenate(axis=1)
-        optimizer = tf.keras.optimizers.Adam(
-            learning_rate=0.002,
+
+        self.optimizer = tf.keras.optimizers.Adam(
+            learning_rate=0.001,
             name='Optimizer'
         )
+        self.model_loss = tf.keras.losses.MeanSquaredError(name='MSE')
+        self.model_metrics = tf.keras.metrics.RootMeanSquaredError(name='RMSE')
+
         self.compile(
-            optimizer=optimizer,
-            loss=tf.keras.losses.MeanSquaredError(name='MSE'),
-            metrics=tf.keras.metrics.RootMeanSquaredError(name='RMSE'),
+            optimizer=self.optimizer,
+            loss=self.model_loss,
+            metrics=self.model_metrics,
         )
 
     def call(self, inputs, training=None):
@@ -252,10 +240,99 @@ class BitcoinRNN(tf.keras.Model):
             A 2D tensor of shape (input_length+horizon, 1) if `training=True`,
                 otherwise a 2D tensor of shape (horizon, 1).
         """
+        inputs = self.input_layer(inputs)
         init_predictions = self.encoder(inputs, training=training)
-        future_predictions = self.decoder(init_predictions, training=training)
 
-        if training:
-            return self.concat_output([init_predictions, future_predictions])
+        return self.decoder(init_predictions, training=training)
 
-        return future_predictions
+
+def functional_rnn(
+    input_length: int,
+    horizon: int,
+    model_name: Optional[str] = None,
+    n_features: Optional[int] = None,
+    encoder_units: Optional[int] = 100,
+    decoder_units: Optional[int] = 20,
+    **kwargs
+):
+    """Creates the RNN model through Tensorflow Functional API architecture.
+
+    This returns the same BitcoinRNN model but built through TensorFlow's
+    Functional API. This is generally used for features that are not present
+    in Subclassing API such as model graphs.
+
+    Args:
+        input_length:
+        horizon:
+        model_name:
+        n_features:
+        encoder_units:
+        decoder_units:
+        **kwargs: Key-value pair arguments to be passed in `BitcoinRNN` class.
+
+    Returns:
+        A `tensorflow.keras.Model`.
+    """
+    modeltemplate = BitcoinRNN(
+        input_length=input_length,
+        horizon=horizon,
+        model_name=model_name,
+        n_features=n_features,
+        encoder_units=encoder_units,
+        decoder_units=decoder_units,
+        **kwargs
+    )
+
+    input_encoder = tf.keras.Input(
+        shape=(input_length, n_features),
+        name='input_encoder',
+    )
+    output_encoder = modeltemplate.encoder.bilstm(input_encoder)
+    encoder = tf.keras.Model(
+        inputs=input_encoder,
+        outputs=output_encoder,
+        name='Encoder'
+    )
+
+    if modeltemplate.encoder.bilstm.merge_mode == 'concat':
+        units = encoder_units * 2
+    else:
+        units = encoder_units
+
+    input_decoder = tf.keras.Input(
+        shape=(input_length, units),
+        name='input_decoder',
+    )
+    x = modeltemplate.decoder.lstm(input_decoder)
+    x = modeltemplate.decoder.flatlayer(x)
+    output_decoder = modeltemplate.decoder.resolve(x)
+    decoder = tf.keras.Model(
+        inputs=input_decoder,
+        outputs=output_decoder,
+        name='Decoder'
+    )
+
+    ensemble_input = tf.keras.Input(
+        shape=(input_length, n_features),
+        name='Input',
+    )
+    encoded_vals = encoder(ensemble_input)
+    decoded_vals = decoder(encoded_vals)
+
+    rnn_model = tf.keras.Model(
+        inputs=ensemble_input,
+        outputs=decoded_vals,
+        name=model_name
+    )
+    rnn_model.compile(
+        optimizer=modeltemplate.optimizer,
+        loss=modeltemplate.model_loss,
+        metrics=modeltemplate.model_metrics,
+    )
+
+    # Displays the model part summaries on the field/cell
+    encoder.summary()
+    decoder.summary()
+    rnn_model.summary()
+
+    return rnn_model

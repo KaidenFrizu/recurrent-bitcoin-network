@@ -12,11 +12,12 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
+from typing import Union
 from typing import Optional
 import pandas as pd
+import tensorflow as tf
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import PowerTransformer
 
 
 class DataTransformer:
@@ -55,15 +56,13 @@ class DataTransformer:
         self.window_rate = window_rate
 
         self.svdtransformer = TruncatedSVD(self.k_components)
-        self.scaler = MinMaxScaler()
-        self.normalizer = PowerTransformer()
+        self.scaler = MinMaxScaler(feature_range=(-1, 1))
 
     def apply_svd(
         self,
         xtrain: pd.DataFrame,
-        xtest: pd.DataFrame,
-        k_components: Optional[int] = None,
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        xtest: Optional[pd.DataFrame] = None,
+    ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame]]:
         """Applies SVD transformation to x inputs.
 
         Args:
@@ -73,25 +72,27 @@ class DataTransformer:
         Returns:
             A tuple of SVD transformed values: (xtrain, xtest).
         """
-        date_slice = xtest.index[0]
-        xdata = pd.concat([xtrain, xtest])
-
-        if self.k_components != k_components:
-            self.k_components = k_components
-            self.svdtransformer = TruncatedSVD(self.k_components)
+        if xtest is not None:
+            date_slice = xtest.index[0]
+            xdata = pd.concat([xtrain, xtest])
+        else:
+            xdata = xtrain
 
         xdata = pd.DataFrame(
             self.svdtransformer.fit_transform(xdata.values),
             index=xdata.index
         )
 
-        return xdata[:date_slice], xdata[date_slice:]
+        if xtest is not None:
+            return xdata[:date_slice], xdata[date_slice:]
+
+        return xdata
 
     def normalize(
         self,
         xtrain: pd.DataFrame,
-        xtest: pd.DataFrame,
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        xtest: Optional[pd.DataFrame] = None,
+    ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame]]:
         """Applies scaling to normalize features.
 
         Args:
@@ -101,18 +102,23 @@ class DataTransformer:
         Returns:
             A tuple of normalized values: (xtrain, xtest).
         """
-        date_slice = xtest.index[0]
-        xdata = pd.concat([xtrain, xtest])
+        if xtest is not None:
+            date_slice = xtest.index[0]
+            xdata = pd.concat([xtrain, xtest])
+        else:
+            xdata = xtrain
 
         init_scale = self.scaler.fit_transform(xdata.values)
-        final_scale = self.normalizer.fit_transform(init_scale)
         xdata = pd.DataFrame(
-            final_scale,
+            init_scale,
             index=xdata.index,
             columns=xdata.columns,
         )
 
-        return xdata[:date_slice], xdata[date_slice:]
+        if xtest is not None:
+            return xdata[:date_slice], xdata[date_slice:]
+
+        return xdata
 
     def create_dataset(
         self,
@@ -150,3 +156,32 @@ class DataTransformer:
             start += self.window_rate
 
         return xresult, yresult
+
+
+class HistoryTransformer:
+    """Here"""
+
+    def __init__(self,
+        hist: tf.keras.callbacks.History,
+        name: str,
+        metric: Optional[str] = 'RMSE',
+    ):
+        self.hist = hist
+        self.name = name
+        self.metric = metric
+
+    def show_results(self):
+        data_dict = {
+            'train': self.hist.history[self.metric],
+            'test': self.hist.history['val_'+self.metric]
+        }
+
+        result = pd.DataFrame(data_dict)
+        result['epoch'] = result.index
+        result['svd_type'] = self.name
+
+        return result.melt(
+            id_vars=['epoch','svd_type'],
+            var_name='dataset',
+            value_name=self.metric,
+        )
