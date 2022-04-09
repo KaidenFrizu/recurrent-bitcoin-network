@@ -75,6 +75,7 @@ class ModelPipeline:
         self.window_rate = window_rate
         self.use_svd = use_svd
         self.is_functional = is_functional
+        self.plotfunc = None
 
         self.transformer = transformer.DataTransformer(
             input_length=self.input_length,
@@ -156,12 +157,27 @@ class ModelPipeline:
                 decoder_units=self.decoder_units
             )
 
+    def _set_plotfunction(self, features: pd.DataFrame, targets: pd.Series):
+        self.plotfunc = plotting.PlotPrediction(
+            features=features,
+            targets=targets,
+            input_length=self.input_length,
+            horizon=self.horizon,
+        )
+
+    def plot_predict(self, date: str, **kwargs):
+        xpred, yplot = self.plotfunc._select_data(date)
+        ypred = self.predict(xpred)
+
+        return self.plotfunc.plot_predict(ypred, date, **kwargs)
+
+
     def transform_data(
         self,
         xtrain: pd.DataFrame,
         xtest: Optional[pd.DataFrame] = None,
     ):
-        "Here"
+        """Here"""
         if xtest is not None:
             xtrain, xtest = self.transformer.normalize(xtrain, xtest)
         else:
@@ -210,6 +226,11 @@ class ModelPipeline:
         Returns:
             A history of loss per epoch.
         """
+        self._set_plotfunction(
+            features=pd.concat([xtrain, xtest]),
+            targets=pd.concat([ytrain, ytest]),
+        )
+
         xtrain, xtest = self.transform_data(xtrain, xtest)
 
         xtrain, ytrain = self.transformer.create_dataset(xtrain, ytrain)
@@ -243,7 +264,6 @@ class ModelPipeline:
 
         return self.tfmodel(x, **kwargs)
 
-
     def reload(self, checkpoint_path: Optional[str] = None, **kwargs):
         """Reload current model weights.
 
@@ -275,7 +295,7 @@ def load_pipeline(filepath: str, section: str):
     parser_args = {}
 
     for key, value in parser.items(section=section):
-        if key == 'is_functional' or key == 'use_svd':
+        if key in ('is_functional', 'use_svd'):
             parser_args[key] = parser.getboolean(section=section, option=key)
             continue
 

@@ -161,7 +161,8 @@ class DataTransformer:
 class HistoryTransformer:
     """Here"""
 
-    def __init__(self,
+    def __init__(
+        self,
         hist: tf.keras.callbacks.History,
         name: str,
         metric: Optional[str] = 'RMSE',
@@ -171,6 +172,7 @@ class HistoryTransformer:
         self.metric = metric
 
     def show_results(self):
+        """Here"""
         data_dict = {
             'train': self.hist.history[self.metric],
             'test': self.hist.history['val_'+self.metric]
@@ -181,7 +183,7 @@ class HistoryTransformer:
         result['svd_type'] = self.name
 
         return result.melt(
-            id_vars=['epoch','svd_type'],
+            id_vars=['epoch', 'svd_type'],
             var_name='dataset',
             value_name=self.metric,
         )

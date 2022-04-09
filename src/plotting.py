@@ -22,19 +22,76 @@ import matplotlib.pyplot as plt
 class PlotPrediction:
     """Here"""
 
-    def __init__(self, input_length: int, horizon: int):
+    def __init__(
+        self,
+        features: pd.DataFrame,
+        targets: pd.Series,
+        input_length: int,
+        horizon: int,
+    ):
+        self.features = features
+        self.targets = targets
         self.input_length = input_length
         self.horizon = horizon
 
+    def _select_data(self, date: str):
+        xindex = pd.date_range(start=date, periods=self.input_length)
+        priceindex = pd.date_range(
+            start=date,
+            periods=self.input_length+self.horizon,
+            )
+
+        return self.features.loc[xindex], self.targets.loc[priceindex]
+
+    def plot_predict(
+        self,
+        ypred,
+        date: str,
+        return_initial: Optional[bool] = True,
+        return_legend: Optional[bool] = True,
+        plot_title: Optional[str] = None,
+        return_ax_only: Optional[bool] = False,
+        **kwargs
+    ):
+        """Here"""
+        fig, ax = plt.subplots(figsize=(12, 5))
+
+        xpred, yplot = self._select_data(date)
+        ypred_index = yplot.index[-(self.horizon+1):]
+        ypred_insert = yplot[-(self.horizon+1)]
+
+        ypred = ypred.numpy().reshape(self.horizon)
+        ypred = np.insert(ypred, 0, ypred_insert)
+        ypred = pd.Series(ypred, index=ypred_index)
+
+        ax = ypred.plot(**kwargs)
+
+        if return_initial:
+            ax = yplot.plot(color='black', label='actual')
+
+        if return_legend:
+            ax.legend()
+
+        ax.set_title(plot_title)
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Price (USD)')
+
+        if return_ax_only:
+            return ax
+
+        return fig, ax
 
 def plot_timeseries_data(
     df: pd.DataFrame,
     plot_title: Optional[str] = None,
+    title_adjust_y: Optional[int] = None,
     savefile: Optional[str] = None,
 ) -> tuple[plt.figure, plt.axes]:
     """Here"""
     if plot_title is None:
         plot_title = 'Time-series of Blockchain-derived Data'
+    if title_adjust_y is None:
+        title_adjust_y = 0.91
 
     n_features = df.columns.unique('metric').shape[0]
     fig, ax = plt.subplots(nrows=n_features, ncols=1, sharex=True)
@@ -49,7 +106,7 @@ def plot_timeseries_data(
         )
         ax[i].legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-    fig.suptitle(plot_title, y=0.91)
+    fig.suptitle(plot_title, y=title_adjust_y)
 
     if savefile is not None:
         fig.savefig(savefile, bbox_inches='tight', dpi=300)
@@ -58,10 +115,12 @@ def plot_timeseries_data(
 
 
 if __name__ == '__main__':
-    df = pd.read_csv('raw/train.csv', parse_dates=['timestamp'])
-    df = df.pivot_table(
+    # Script is used to debug in this .py file
+
+    data = pd.read_csv('raw/train.csv', parse_dates=['timestamp'])
+    data = data.pivot_table(
         index='timestamp',
         columns=['metric', 'submetric'],
         values='value'
     )
-    plot_timeseries_data(df)
+    plot_timeseries_data(data)

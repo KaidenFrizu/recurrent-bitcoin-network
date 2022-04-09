@@ -138,6 +138,7 @@ class Decoder(tf.keras.Model):
 
         return self.resolve(x)
 
+
 class BitcoinRNN(tf.keras.Model):
     """A Tensorflow RNN model with a sequence to sequence (Seq2Seq) framework
     to predict future Bitcoin prices given multiple time series features.
@@ -253,6 +254,7 @@ def functional_rnn(
     n_features: Optional[int] = None,
     encoder_units: Optional[int] = 100,
     decoder_units: Optional[int] = 20,
+    show_summary: Optional[bool] = True,
     **kwargs
 ):
     """Creates the RNN model through Tensorflow Functional API architecture.
@@ -330,9 +332,9 @@ def functional_rnn(
         metrics=modeltemplate.model_metrics,
     )
 
-    # Displays the model part summaries on the field/cell
-    encoder.summary()
-    decoder.summary()
-    rnn_model.summary()
+    if show_summary:
+        encoder.summary()
+        decoder.summary()
+        rnn_model.summary()
 
     return rnn_model
