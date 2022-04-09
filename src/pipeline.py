@@ -165,12 +165,28 @@ class ModelPipeline:
             horizon=self.horizon,
         )
 
-    def plot_predict(self, date: str, **kwargs):
-        xpred, yplot = self.plotfunc._select_data(date)
-        ypred = self.predict(xpred)
+    def plot_predict(
+        self,
+        date: str,
+        return_initial: Optional[bool] = True,
+        return_legend: Optional[bool] = True,
+        plot_title: Optional[str] = None,
+        return_ax_only: Optional[bool] = False,
+        **kwargs
+        ):
+        """Here"""
+        xtest, ytest = self.plotfunc.select_data(date)
+        ypred = self.predict(xtest)
 
-        return self.plotfunc.plot_predict(ypred, date, **kwargs)
-
+        return self.plotfunc.plot_predict(
+            ypred=ypred,
+            ytest=ytest,
+            return_initial=return_initial,
+            return_legend=return_legend,
+            plot_title=plot_title,
+            return_ax_only=return_ax_only,
+            **kwargs
+        )
 
     def transform_data(
         self,

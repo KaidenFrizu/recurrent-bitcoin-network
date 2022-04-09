@@ -297,12 +297,10 @@ def functional_rnn(
     )
 
     if modeltemplate.encoder.bilstm.merge_mode == 'concat':
-        units = encoder_units * 2
-    else:
-        units = encoder_units
+        encoder_units = encoder_units * 2
 
     input_decoder = tf.keras.Input(
-        shape=(input_length, units),
+        shape=(input_length, encoder_units),
         name='input_decoder',
     )
     x = modeltemplate.decoder.lstm(input_decoder)

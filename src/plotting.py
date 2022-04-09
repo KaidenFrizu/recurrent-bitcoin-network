@@ -14,6 +14,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from typing import Optional
+from typing import Union
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -34,7 +35,8 @@ class PlotPrediction:
         self.input_length = input_length
         self.horizon = horizon
 
-    def _select_data(self, date: str):
+    def select_data(self, date: str):
+        """Here"""
         xindex = pd.date_range(start=date, periods=self.input_length)
         priceindex = pd.date_range(
             start=date,
@@ -46,19 +48,18 @@ class PlotPrediction:
     def plot_predict(
         self,
         ypred,
-        date: str,
+        ytest,
         return_initial: Optional[bool] = True,
         return_legend: Optional[bool] = True,
         plot_title: Optional[str] = None,
         return_ax_only: Optional[bool] = False,
         **kwargs
-    ):
+    ) -> Union[tuple(plt.figure, plt.axes), plt.axes]:
         """Here"""
         fig, ax = plt.subplots(figsize=(12, 5))
 
-        xpred, yplot = self._select_data(date)
-        ypred_index = yplot.index[-(self.horizon+1):]
-        ypred_insert = yplot[-(self.horizon+1)]
+        ypred_index = ytest.index[-(self.horizon+1):]
+        ypred_insert = ytest[-(self.horizon+1)]
 
         ypred = ypred.numpy().reshape(self.horizon)
         ypred = np.insert(ypred, 0, ypred_insert)
@@ -80,6 +81,7 @@ class PlotPrediction:
             return ax
 
         return fig, ax
+
 
 def plot_timeseries_data(
     df: pd.DataFrame,
