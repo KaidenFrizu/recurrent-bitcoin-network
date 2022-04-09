@@ -173,7 +173,7 @@ class ModelPipeline:
         plot_title: Optional[str] = None,
         return_ax_only: Optional[bool] = False,
         **kwargs
-        ):
+    ):
         """Here"""
         xtest, ytest = self.plotfunc.select_data(date)
         ypred = self.predict(xtest)

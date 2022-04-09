@@ -54,7 +54,7 @@ class PlotPrediction:
         plot_title: Optional[str] = None,
         return_ax_only: Optional[bool] = False,
         **kwargs
-    ) -> Union[tuple(plt.figure, plt.axes), plt.axes]:
+    ) -> Union[tuple[plt.figure, plt.axes], plt.axes]:
         """Here"""
         fig, ax = plt.subplots(figsize=(12, 5))
 
@@ -68,7 +68,7 @@ class PlotPrediction:
         ax = ypred.plot(**kwargs)
 
         if return_initial:
-            ax = yplot.plot(color='black', label='actual')
+            ax = ytest.plot(color='black', label='actual')
 
         if return_legend:
             ax.legend()
