@@ -159,7 +159,22 @@ class DataTransformer:
 
 
 class HistoryTransformer:
-    """Here"""
+    """A class dedicated to preprocess the model history data for summaries.
+
+    This is used for preprocessing model performance through given metrics for
+    plotting and visualizations.
+
+    Args:
+        hist: A history from a model callback. This is taken during model
+            training phase.
+        name: The name of the transforer, usually indicates the SVD type used.
+        metric: The metric used for determining performance.
+
+    Attributes:
+        hist
+        name
+        metric
+    """
 
     def __init__(
         self,
@@ -172,7 +187,12 @@ class HistoryTransformer:
         self.metric = metric
 
     def show_results(self):
-        """Here"""
+        """Preprocess the given history from callbacks for plotting and
+        visualization purposes.
+
+        Returns:
+            A `pd.DataFrame` of metric values per epoch in long format.
+        """
         data_dict = {
             'train': self.hist.history[self.metric],
             'test': self.hist.history['val_'+self.metric]

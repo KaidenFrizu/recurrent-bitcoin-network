@@ -17,11 +17,29 @@ from typing import Optional
 from typing import Union
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 import matplotlib.pyplot as plt
 
 
 class PlotPrediction:
-    """Here"""
+    """A class used for plot model predictions.
+
+    Although it is possible to use this class explicitly, it is recommended
+    to use `pipeline.ModelPipeline` instead which this class is treated as an
+    attribute.
+
+    Args:
+        features: A data frame of features to be used for prediction.
+        targets: A series of values to be predicted.
+        input_length: The number of steps to be used as inputs at a time.
+        horizon: The number of timesteps for forecasting.
+
+    Attributes:
+        features
+        targets
+        input_length
+        horizon
+    """
 
     def __init__(
         self,
@@ -36,7 +54,18 @@ class PlotPrediction:
         self.horizon = horizon
 
     def select_data(self, date: str):
-        """Here"""
+        """Selects a series of data points from a given starting date.
+
+        Note that the starting date indicates the start date of feature inputs
+        where it is calculated by `input_length` and `horizon` to return a
+        particular series of features and target values.
+
+        Args:
+            date: The start date of the features to be selected.
+
+        Returns:
+            A tuple of selected features and its corresponding targets.
+        """
         xindex = pd.date_range(start=date, periods=self.input_length)
         priceindex = pd.date_range(
             start=date,
@@ -47,15 +76,34 @@ class PlotPrediction:
 
     def plot_predict(
         self,
-        ypred,
-        ytest,
+        ypred: tf.Tensor,
+        ytest: pd.Series,
         return_initial: Optional[bool] = True,
         return_legend: Optional[bool] = True,
         plot_title: Optional[str] = None,
         return_ax_only: Optional[bool] = False,
         **kwargs
-    ) -> Union[tuple[plt.figure, plt.axes], plt.axes]:
-        """Here"""
+    ) -> Union[tuple[plt.Figure, plt.Axes], plt.Axes]:
+        """Plots the given data points through a line plot.
+
+        This method is particularly unstable as it is yet to account for
+        positions and plot scaling. This is best to be used as is.
+
+        Args:
+            ypred: A series of predicted values.
+            ytest: A series of values to be tested from predictions.
+            return_initial: Determines whether to plot the initial and actual
+                values in the given time period.
+            return_legend: Shows whether or not to return a plot legend.
+            plot_title: The name of the plot to be shown above.
+            return_ax_only: Shows whether to return only `pyplot.Axes` only.
+                This is used for parent-level plotting or requires additional
+                plot arguments.
+
+        Returns:
+            A tuple of `pyplot.Figure` and `pyplot.Axes` depending on the
+                value of `return_ax_only`.
+        """
         fig, ax = plt.subplots(figsize=(12, 5))
 
         ypred_index = ytest.index[-(self.horizon+1):]
@@ -86,10 +134,20 @@ class PlotPrediction:
 def plot_timeseries_data(
     df: pd.DataFrame,
     plot_title: Optional[str] = None,
-    title_adjust_y: Optional[int] = None,
+    title_adjust_y: Optional[float] = None,
     savefile: Optional[str] = None,
-) -> tuple[plt.figure, plt.axes]:
-    """Here"""
+) -> tuple[plt.Figure, plt.Axes]:
+    """Plots the time series features row-wise.
+
+    Args:
+        df: A dataframe of time series data points in wide format.
+        plot_title: The title of the plot to be added.
+        title_adjust_y: The y-component of the title position.
+        savefile: The name of the file for plot saving.
+
+    Returns:
+        A tuple of `pyplot.Figure` and `pyplot.Axes`.
+    """
     if plot_title is None:
         plot_title = 'Time-series of Blockchain-derived Data'
     if title_adjust_y is None:

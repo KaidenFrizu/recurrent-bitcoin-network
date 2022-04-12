@@ -174,7 +174,27 @@ class ModelPipeline:
         return_ax_only: Optional[bool] = False,
         **kwargs
     ):
-        """Here"""
+        """Shows the plot prediction based on a given date.
+
+        The data used for plotting are from the data passed during training,
+        `.model_train()`. The data are merged together to have a continuous
+        prediction on part of train and test data.
+
+        Args:
+            date: A date that indicates the start date used for retrieving
+                predictors.
+            return_initial: Determines whether to plot the initial and actual
+                values in the given time period.
+            return_legend: Shows whether or not to return a plot legend.
+            plot_title: The name of the plot to be shown above.
+            return_ax_only: Shows whether to return only `pyplot.Axes` only.
+                This is used for parent-level plotting or requires additional
+                plot arguments.
+
+        Returns:
+            A tuple of `pyplot.Figure` and `pyplot.Axes` depending on the
+                value of `return_ax_only`.
+        """
         xtest, ytest = self.plotfunc.select_data(date)
         ypred = self.predict(xtest)
 
@@ -193,7 +213,20 @@ class ModelPipeline:
         xtrain: pd.DataFrame,
         xtest: Optional[pd.DataFrame] = None,
     ):
-        """Here"""
+        """Transforms the data into optimized, model-readable form for
+        prediction.
+
+        If both `xtrain` and `xtest` are supplied, they are concatenated
+        together before SVD is applied.
+
+        Args:
+            xtrain: Data containing the features for training.
+            xtest: Data containing the features for testing.
+
+        Returns:
+            Two `pd.DataFrame`s if `xtest` is also supplied, else it returns
+                one `pd.DataFrame`.
+        """
         if xtest is not None:
             xtrain, xtest = self.transformer.normalize(xtrain, xtest)
         else:
@@ -274,7 +307,14 @@ class ModelPipeline:
         return transformer.HistoryTransformer(hist=hist, name=self.model_name)
 
     def predict(self, x: pd.DataFrame, **kwargs):
-        """Here"""
+        """Predicts the future values given a series of features.
+
+        Args:
+            x: A pd.DataFrame of features used for prediction.
+
+        Returns:
+            A `tf.Tensor` of model predictions.
+        """
         x = self.transform_data(x)
         x = np.array([x.values])
 
