@@ -49,9 +49,9 @@ class Encoder(tf.keras.Model):
             activation=tf.keras.activations.swish,
             dropout=0,
             kernel_initializer=tf.keras.initializers.RandomUniform(seed=306),
-            kernel_regularizer='l2',
+            kernel_regularizer=None,
             bias_initializer=tf.keras.initializers.RandomUniform(seed=306),
-            bias_regularizer='l1',
+            bias_regularizer=None,
             name='encoder_lstm',
             return_sequences=True,
         )
@@ -107,16 +107,32 @@ class Decoder(tf.keras.Model):
             units=units,
             activation=tf.keras.activations.swish,
             dropout=0,
-            kernel_regularizer='l1',
+            kernel_regularizer=None,
             kernel_initializer=tf.keras.initializers.RandomUniform(seed=306),
             bias_regularizer=None,
             bias_initializer=tf.keras.initializers.RandomUniform(seed=306),
             name='decoder_lstm',
             return_sequences=True,
         )
+        base_comp = tf.keras.layers.Dense(
+            units=1,
+            kernel_regularizer=None,
+            kernel_initializer=tf.keras.initializers.RandomUniform(seed=306),
+            bias_regularizer=None,
+            bias_initializer=tf.keras.initializers.RandomUniform(seed=306),
+            name='base_compress'
+        )
+        self.compressor = tf.keras.layers.TimeDistributed(
+            base_comp,
+            name='compress'
+        )
         self.flatlayer = tf.keras.layers.Flatten(name='flat_layer')
         self.resolve = tf.keras.layers.Dense(
             units=self.horizon,
+            kernel_regularizer=None,
+            kernel_initializer=tf.keras.initializers.RandomUniform(seed=306),
+            bias_regularizer=None,
+            bias_initializer=tf.keras.initializers.RandomUniform(seed=306),
             name='predict'
         )
 
@@ -214,7 +230,7 @@ class BitcoinRNN(tf.keras.Model):
         )
 
         self.optimizer = tf.keras.optimizers.Adam(
-            learning_rate=0.001,
+            learning_rate=0.003,
             name='Optimizer'
         )
         self.model_loss = tf.keras.losses.MeanSquaredError(name='MSE')
@@ -304,6 +320,7 @@ def functional_rnn(
         name='input_decoder',
     )
     x = modeltemplate.decoder.lstm(input_decoder)
+    x = modeltemplate.decoder.compressor(x)
     x = modeltemplate.decoder.flatlayer(x)
     output_decoder = modeltemplate.decoder.resolve(x)
     decoder = tf.keras.Model(

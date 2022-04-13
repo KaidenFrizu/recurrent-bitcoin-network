@@ -123,7 +123,7 @@ class ModelPipeline:
         )
         self.nancallback = tf.keras.callbacks.TerminateOnNaN()
         self.scheduler = tf.keras.callbacks.LearningRateScheduler(
-            lambda ep, rate: rate if ep <= 100 else rate * tf.math.exp(-0.01)
+            lambda ep, rate: rate if ep <= 150 else rate * tf.math.exp(-0.001)
         )
         self.callback_list = [
             self.tbcallback,
@@ -171,7 +171,7 @@ class ModelPipeline:
         return_initial: Optional[bool] = True,
         return_legend: Optional[bool] = True,
         plot_title: Optional[str] = None,
-        return_ax_only: Optional[bool] = False,
+        return_preds_only: Optional[bool] = False,
         **kwargs
     ):
         """Shows the plot prediction based on a given date.
@@ -187,16 +187,16 @@ class ModelPipeline:
                 values in the given time period.
             return_legend: Shows whether or not to return a plot legend.
             plot_title: The name of the plot to be shown above.
-            return_ax_only: Shows whether to return only `pyplot.Axes` only.
-                This is used for parent-level plotting or requires additional
-                plot arguments.
+            return_preds_only: Shows whether to return only `pyplot.Axes`
+                only. This is used for parent-level plotting or requires
+                additional plot arguments.
 
         Returns:
             A tuple of `pyplot.Figure` and `pyplot.Axes` depending on the
                 value of `return_ax_only`.
         """
         xtest, ytest = self.plotfunc.select_data(date)
-        ypred = self.predict(xtest)
+        ypred = self.predict(xtest, transform=False)
 
         return self.plotfunc.plot_predict(
             ypred=ypred,
@@ -204,7 +204,7 @@ class ModelPipeline:
             return_initial=return_initial,
             return_legend=return_legend,
             plot_title=plot_title,
-            return_ax_only=return_ax_only,
+            return_preds_only=return_preds_only,
             **kwargs
         )
 
@@ -212,6 +212,7 @@ class ModelPipeline:
         self,
         xtrain: pd.DataFrame,
         xtest: Optional[pd.DataFrame] = None,
+        use_diff: Optional[bool] = False,
     ):
         """Transforms the data into optimized, model-readable form for
         prediction.
@@ -222,26 +223,20 @@ class ModelPipeline:
         Args:
             xtrain: Data containing the features for training.
             xtest: Data containing the features for testing.
+            use_diff: Sets whether to apply first differencing to the given
+                data.
+            use_svd: Sets whether to apply SVD.
 
         Returns:
             Two `pd.DataFrame`s if `xtest` is also supplied, else it returns
                 one `pd.DataFrame`.
         """
-        if xtest is not None:
-            xtrain, xtest = self.transformer.normalize(xtrain, xtest)
-        else:
-            xtrain = self.transformer.normalize(xtrain)
-
-        if self.use_svd:
-            if xtest is not None:
-                xtrain, xtest = self.transformer.apply_svd(xtrain, xtest)
-            else:
-                xtrain = self.transformer.apply_svd(xtrain)
-
-        if xtest is not None:
-            return xtrain, xtest
-
-        return xtrain
+        return self.transformer.transform(
+            xtrain=xtrain,
+            xtest=xtest,
+            use_diff=use_diff,
+            use_svd=self.use_svd,
+        )
 
     def model_train(
         self,
@@ -275,20 +270,23 @@ class ModelPipeline:
         Returns:
             A history of loss per epoch.
         """
+        xtrain, xtest = self.transform_data(xtrain, xtest, use_diff=True)
+
         self._set_plotfunction(
             features=pd.concat([xtrain, xtest]),
             targets=pd.concat([ytrain, ytest]),
         )
 
-        xtrain, xtest = self.transform_data(xtrain, xtest)
-
-        xtrain, ytrain = self.transformer.create_dataset(xtrain, ytrain)
-        xtest, ytest = self.transformer.create_dataset(xtest, ytest)
-
-        xtrain = np.array([df.to_numpy() for df in xtrain])
-        ytrain = np.array([tgt.to_numpy() for tgt in ytrain])
-        xtest = np.array([df.to_numpy() for df in xtest])
-        ytest = np.array([tgt.to_numpy() for tgt in ytest])
+        xtrain, ytrain = self.transformer.create_dataset(
+            xdata=xtrain,
+            ydata=ytrain,
+            use_diff=True
+        )
+        xtest, ytest = self.transformer.create_dataset(
+            xdata=xtest,
+            ydata=ytest,
+            use_diff=True
+        )
 
         if new_callback_dir:
             self._set_callback_dir()
@@ -306,16 +304,26 @@ class ModelPipeline:
 
         return transformer.HistoryTransformer(hist=hist, name=self.model_name)
 
-    def predict(self, x: pd.DataFrame, **kwargs):
+    def predict(
+        self,
+        x: pd.DataFrame,
+        transform: Optional[bool] = True,
+        **kwargs
+    ):
         """Predicts the future values given a series of features.
 
         Args:
             x: A pd.DataFrame of features used for prediction.
+            transform: Decides whether or not to transform the given features
+                before feeding to the model. This is generally disabled when
+                the given features are already preprocessed.
 
         Returns:
             A `tf.Tensor` of model predictions.
         """
-        x = self.transform_data(x)
+        if transform:
+            x = self.transform_data(x)
+
         x = np.array([x.values])
 
         return self.tfmodel(x, **kwargs)
