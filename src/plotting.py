@@ -81,7 +81,7 @@ class PlotPrediction:
         return_initial: Optional[bool] = True,
         return_legend: Optional[bool] = True,
         plot_title: Optional[str] = None,
-        return_ax_only: Optional[bool] = False,
+        return_preds_only: Optional[bool] = False,
         **kwargs
     ) -> Union[tuple[plt.Figure, plt.Axes], plt.Axes]:
         """Plots the given data points through a line plot.
@@ -96,23 +96,27 @@ class PlotPrediction:
                 values in the given time period.
             return_legend: Shows whether or not to return a plot legend.
             plot_title: The name of the plot to be shown above.
-            return_ax_only: Shows whether to return only `pyplot.Axes` only.
-                This is used for parent-level plotting or requires additional
-                plot arguments.
+            return_preds_only: Shows whether to return only `pyplot.Axes`
+                only. This is used for parent-level plotting or requires
+                additional plot arguments.
 
         Returns:
             A tuple of `pyplot.Figure` and `pyplot.Axes` depending on the
                 value of `return_ax_only`.
         """
-        fig, ax = plt.subplots(figsize=(12, 5))
-
         ypred_index = ytest.index[-(self.horizon+1):]
         ypred_insert = ytest[-(self.horizon+1)]
 
         ypred = ypred.numpy().reshape(self.horizon)
+        ypred = ypred.cumsum()
+        ypred = ypred + ypred_insert
         ypred = np.insert(ypred, 0, ypred_insert)
         ypred = pd.Series(ypred, index=ypred_index)
 
+        if return_preds_only:
+            return ypred.plot(**kwargs)
+
+        fig, ax = plt.subplots(figsize=(12, 5))
         ax = ypred.plot(**kwargs)
 
         if return_initial:
@@ -124,9 +128,6 @@ class PlotPrediction:
         ax.set_title(plot_title)
         ax.set_xlabel('Date')
         ax.set_ylabel('Price (USD)')
-
-        if return_ax_only:
-            return ax
 
         return fig, ax
 

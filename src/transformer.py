@@ -14,6 +14,7 @@ GNU General Public License for more details.
 """
 from typing import Union
 from typing import Optional
+import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn.decomposition import TruncatedSVD
@@ -56,7 +57,7 @@ class DataTransformer:
         self.window_rate = window_rate
 
         self.svdtransformer = TruncatedSVD(self.k_components)
-        self.scaler = MinMaxScaler(feature_range=(-1, 1))
+        self.scaler = MinMaxScaler(feature_range=(-5, 5))
 
     def apply_svd(
         self,
@@ -120,12 +121,60 @@ class DataTransformer:
 
         return xdata
 
+    def transform(
+        self,
+        xtrain: pd.DataFrame,
+        xtest: Optional[pd.DataFrame] = None,
+        use_diff: Optional[bool] = False,
+        use_svd: Optional[bool] = False,
+    ):
+        """Transforms the data into optimized, model-readable form for
+        prediction.
+
+        If both `xtrain` and `xtest` are supplied, they are concatenated
+        together before SVD is applied.
+
+        Args:
+            xtrain: Data containing the features for training.
+            xtest: Data containing the features for testing.
+            use_diff: Sets whether to apply first differencing to the given
+                data.
+            use_svd: Sets whether to apply SVD.
+
+        Returns:
+            Two `pd.DataFrame`s if `xtest` is also supplied, else it returns
+                one `pd.DataFrame`.
+        """
+        if use_diff:
+            if xtest is not None:
+                xtest = xtest.diff(axis=0).fillna(0)
+
+            xtrain = xtrain.diff(axis=0).fillna(0)
+
+        if xtest is not None:
+            xtrain, xtest = self.normalize(xtrain, xtest)
+        else:
+            xtrain = self.normalize(xtrain)
+
+        if use_svd:
+            if xtest is not None:
+                xtrain, xtest = self.apply_svd(xtrain, xtest)
+            else:
+                xtrain = self.apply_svd(xtrain)
+
+        if xtest is not None:
+            return xtrain, xtest
+
+        return xtrain
+
     def create_dataset(
         self,
         xdata: pd.DataFrame,
         ydata: pd.Series,
         return_train_y: Optional[bool] = False,
-    ) -> tuple[list[pd.DataFrame], list[pd.Series]]:
+        to_cumsum: Optional[bool] = False,
+        use_diff: Optional[bool] = False,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Creates time series batch datasets based on the given window rate.
 
         Note that the creation of samples are given in a constant window rate
@@ -136,26 +185,38 @@ class DataTransformer:
             ydata: A `pandas.Series` of target values.
             return_train_y: Determines whether to include current timesteps
                 of y values in the batches.
+            to_cumsum: Determines whether to output target values as a
+                cumulative sum that is set before the first target value.
 
         Returns:
-            A tuple of batch datasets (x_batched, y_batched).
+            A tuple of batch datasets in `np.ndarray` (x_batched, y_batched).
         """
         xresult = []
         yresult = []
 
+        if use_diff:
+            ydata = ydata.diff().fillna(0)
+
         start = 0
         while start + self.input_length + self.horizon <= ydata.shape[0]:
             stop_window = start + self.input_length
-            xresult.append(xdata[start:stop_window])
+
+            xres = xdata[start:stop_window]
+            xresult.append(xres.to_numpy())
 
             if return_train_y:
-                yresult.append(ydata[start:stop_window+self.horizon])
+                res = ydata[start:stop_window+self.horizon]
+            elif to_cumsum:
+                res = ydata[stop_window-1:stop_window+self.horizon]
+                res = res - res[0]
+                res = res[1:]
             else:
-                yresult.append(ydata[stop_window:stop_window+self.horizon])
+                res = ydata[stop_window:stop_window+self.horizon]
 
+            yresult.append(res.to_numpy())
             start += self.window_rate
 
-        return xresult, yresult
+        return np.array(xresult), np.array(yresult)
 
 
 class HistoryTransformer:
