@@ -4,9 +4,11 @@
 
 ### About
 
-This repository is part of our Data Science Undergraduate Thesis. It contains the source code for implementing Bitcoin price prediciton using a Seq2Seq-AR RNN architecture via TensorFlow.
+This repository is part of BS Data Science Undergraduate Thesis. It contains the source code for implementing Bitcoin price prediciton using a Seq2Seq RNN architecture via TensorFlow.
 
 The data was collected through [Messari](https://messari.io/) web API. The documentation can be found [here](https://messari.io/api/docs).
+
+Project by __Julyver Tolentino__ (KaidenFrizu) and __Jiaxin Shen__
 
 ---
 
